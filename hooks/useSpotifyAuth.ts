@@ -62,7 +62,11 @@ export function useSpotifyAuth() {
       const { code } = response.params;
       exchangeCodeForToken(code, request?.codeVerifier ?? '');
     } else if (response?.type === 'error') {
-      setError('Đăng nhập thất bại. Vui lòng thử lại.');
+      const errDetail = response.error?.message || response.error?.code || JSON.stringify(response.error) || 'Unknown err';
+      setError(`AuthError: ${errDetail}`);
+      setLoading(false);
+    } else if (response?.type === 'dismiss' || response?.type === 'cancel') {
+      setError('Bạn đã hủy đăng nhập.');
       setLoading(false);
     }
   }, [response]);
