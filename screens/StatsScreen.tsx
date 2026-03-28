@@ -167,7 +167,7 @@ export default function StatsScreen({
           </View>
           <View style={styles.artistStatCard}>
             <Text style={styles.artistStatValue}>
-              {artists[0] ? formatNumber(artists[0].followers.total) : '—'}
+              {artists[0] ? formatNumber(artists[0]?.followers?.total || 0) : '—'}
             </Text>
             <Text style={styles.artistStatLabel}>Followers nghệ sĩ #1</Text>
           </View>

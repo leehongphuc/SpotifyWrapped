@@ -111,9 +111,9 @@ export default function ProfileScreen({ user, playlists, onLogout }: ProfileScre
               )}
               <View style={styles.playlistInfo}>
                 <Text style={styles.playlistName} numberOfLines={1}>
-                  {p.name}
+                  {p?.name || 'Playlist'}
                 </Text>
-                <Text style={styles.playlistCount}>{p.tracks.total} bài hát</Text>
+                <Text style={styles.playlistCount}>{p?.tracks?.total || 0} bài hát</Text>
               </View>
             </View>
           ))}
