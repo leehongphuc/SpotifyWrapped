@@ -7,7 +7,6 @@ import {
   StyleSheet,
   Animated,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../constants/colors';
 import { SpotifyTrack, formatDuration } from '../services/spotifyApi';
 
@@ -53,12 +52,7 @@ export function TrackCard({ track, rank, onPress, compact = false }: TrackCardPr
         onPress={onPress}
         style={[styles.container, compact && styles.containerCompact]}
       >
-        <LinearGradient
-          colors={Colors.gradientCard as [string, string]}
-          style={styles.gradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
+        <View style={styles.cardContent}>
           {/* Rank Badge */}
           <View style={styles.rankBadge}>
             <Text style={[styles.rankText, { color: rankColor }]}>
@@ -79,20 +73,11 @@ export function TrackCard({ track, rank, onPress, compact = false }: TrackCardPr
             </Text>
             {!compact && (
               <View style={styles.meta}>
-                <Text style={styles.metaText}>⏱ {duration}</Text>
-                <View style={styles.popularityBadge}>
-                  <View
-                    style={[
-                      styles.popularityBar,
-                      { width: `${track?.popularity || 0}%` as any },
-                    ]}
-                  />
-                </View>
-                <Text style={styles.metaText}>{track?.popularity || 0}%</Text>
+                <Text style={styles.metaText}>{duration}</Text>
               </View>
             )}
           </View>
-        </LinearGradient>
+        </View>
       </TouchableOpacity>
     </Animated.View>
   );
@@ -101,21 +86,20 @@ export function TrackCard({ track, rank, onPress, compact = false }: TrackCardPr
 const styles = StyleSheet.create({
   container: {
     marginHorizontal: 16,
-    marginVertical: 4,
-    borderRadius: 16,
+    marginVertical: 6,
+    borderRadius: 8,
+    backgroundColor: Colors.card,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: Colors.border,
   },
   containerCompact: {
-    marginHorizontal: 8,
-    marginVertical: 3,
+    marginHorizontal: 16,
+    marginVertical: 4,
   },
-  gradient: {
+  cardContent: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    gap: 12,
+    gap: 14,
   },
   rankBadge: {
     width: 32,
@@ -137,37 +121,24 @@ const styles = StyleSheet.create({
   },
   info: {
     flex: 1,
-    gap: 3,
+    justifyContent: 'center',
   },
   trackName: {
     color: Colors.textPrimary,
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '800',
+    marginBottom: 4,
   },
   artistName: {
     color: Colors.textSecondary,
-    fontSize: 12,
+    fontSize: 14,
+    fontWeight: '500',
   },
   meta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 4,
+    marginTop: 6,
   },
   metaText: {
     color: Colors.textMuted,
-    fontSize: 11,
-  },
-  popularityBadge: {
-    flex: 1,
-    height: 4,
-    backgroundColor: Colors.border,
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  popularityBar: {
-    height: '100%',
-    backgroundColor: Colors.neonGreen,
-    borderRadius: 2,
+    fontSize: 12,
   },
 });

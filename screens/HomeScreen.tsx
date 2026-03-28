@@ -10,7 +10,6 @@ import {
   RefreshControl,
   Dimensions,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../constants/colors';
 import { SpotifyUser, SpotifyTrack, SpotifyArtist, calcTotalDuration, formatDuration, formatNumber } from '../services/spotifyApi';
 import { StatCard } from '../components/StatCard';
@@ -49,10 +48,6 @@ export default function HomeScreen({
 
   const totalDuration = calcTotalDuration(topTracks);
   const uniqueArtists = new Set(topTracks.flatMap((t) => t.artists.map((a) => a.id))).size;
-  const avgPopularity =
-    topTracks.length > 0
-      ? Math.round(topTracks.reduce((s, t) => s + t.popularity, 0) / topTracks.length)
-      : 0;
 
   const greeting = () => {
     const hour = new Date().getHours();
@@ -74,15 +69,7 @@ export default function HomeScreen({
       }
     >
       {/* Header */}
-      <LinearGradient
-        colors={['#1A0E2E', Colors.background]}
-        style={styles.header}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-      >
-        {/* Blur accent */}
-        <View style={styles.headerBlob} />
-
+      <View style={styles.header}>
         <Animated.View
           style={[
             styles.headerContent,
@@ -93,14 +80,11 @@ export default function HomeScreen({
             {user?.images?.[0]?.url ? (
               <Image source={{ uri: user.images[0].url }} style={styles.avatar} />
             ) : (
-              <LinearGradient
-                colors={Colors.gradientPink as [string, string]}
-                style={styles.avatarPlaceholder}
-              >
+              <View style={styles.avatarPlaceholder}>
                 <Text style={styles.avatarInitial}>
                   {user?.display_name?.[0]?.toUpperCase() || '?'}
                 </Text>
-              </LinearGradient>
+              </View>
             )}
             <View style={styles.userInfo}>
               <Text style={styles.greeting}>{greeting()}</Text>
@@ -109,16 +93,13 @@ export default function HomeScreen({
               </Text>
             </View>
             {user?.product === 'premium' && (
-              <LinearGradient
-                colors={Colors.gradientGold as [string, string]}
-                style={styles.premiumBadge}
-              >
+              <View style={styles.premiumBadge}>
                 <Text style={styles.premiumText}>⭐ Premium</Text>
-              </LinearGradient>
+              </View>
             )}
           </View>
         </Animated.View>
-      </LinearGradient>
+      </View>
 
       <View style={styles.body}>
         {/* Stat Cards */}
@@ -144,15 +125,8 @@ export default function HomeScreen({
             emoji="🎤"
             value={`${uniqueArtists}`}
             label="Nghệ sĩ độc đáo"
-            gradientColors={[Colors.neonGreen, '#158a3e']}
+            gradientColors={[Colors.neonGreen, Colors.neonGreen]}
             delay={300}
-          />
-          <StatCard
-            emoji="🔥"
-            value={`${avgPopularity}%`}
-            label="Độ phổ biến trung bình"
-            gradientColors={[Colors.neonYellow, Colors.bronze]}
-            delay={400}
           />
         </View>
 
@@ -183,20 +157,15 @@ export default function HomeScreen({
 
         {/* Fun Fact */}
         {topTracks.length > 0 && (
-          <LinearGradient
-            colors={[Colors.neonPurple + '20', Colors.neonPink + '20']}
-            style={styles.funCard}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
+          <View style={styles.funCard}>
             <Text style={styles.funTitle}>💡 Fun Fact</Text>
             <Text style={styles.funText}>
-              Bài hát #1 của bạn là{' '}
+              Bản hit gắn liền với bạn là{' '}
               <Text style={styles.funHighlight}>"{topTracks[0]?.name}"</Text>.
-              {'\n'}Nghệ sĩ yêu thích nhất:{' '}
-              <Text style={styles.funHighlight}>{topArtists[0]?.name}</Text>! 🎉
+              {'\n'}Bạn đã cày list nhạc của{' '}
+              <Text style={styles.funHighlight}>{topArtists[0]?.name}</Text> rất nhiều! 🎉
             </Text>
-          </LinearGradient>
+          </View>
         )}
 
         <View style={{ height: 100 }} />
@@ -244,6 +213,7 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: Colors.neonPink,
   },
   avatarInitial: {
     color: '#FFF',
@@ -266,6 +236,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 20,
+    backgroundColor: Colors.gold,
   },
   premiumText: {
     color: '#FFF',
@@ -277,10 +248,10 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: Colors.textPrimary,
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 22,
+    fontWeight: '900',
     paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingBottom: 16,
   },
   statGrid: {
     flexDirection: 'row',
@@ -291,10 +262,9 @@ const styles = StyleSheet.create({
   funCard: {
     margin: 16,
     marginTop: 24,
-    padding: 20,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: Colors.neonPurple + '30',
+    padding: 24,
+    borderRadius: 16,
+    backgroundColor: Colors.card,
   },
   funTitle: {
     color: Colors.textPrimary,

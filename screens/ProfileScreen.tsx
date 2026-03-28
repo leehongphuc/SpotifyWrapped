@@ -9,7 +9,6 @@ import {
   Alert,
   StatusBar,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../constants/colors';
 import { SpotifyUser, SpotifyPlaylist, formatNumber } from '../services/spotifyApi';
 
@@ -36,29 +35,17 @@ export default function ProfileScreen({ user, playlists, onLogout }: ProfileScre
       <StatusBar barStyle="light-content" />
 
       {/* Profile Header */}
-      <LinearGradient
-        colors={[Colors.neonPurple + '40', Colors.background]}
-        style={styles.header}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-      >
+      <View style={styles.header}>
         <View style={styles.avatarWrapper}>
           {user?.images?.[0]?.url ? (
             <Image source={{ uri: user.images[0].url }} style={styles.avatar} />
           ) : (
-            <LinearGradient
-              colors={Colors.gradientPink as [string, string]}
-              style={styles.avatarPlaceholder}
-            >
+            <View style={styles.avatarPlaceholder}>
               <Text style={styles.avatarInitial}>
                 {user?.display_name?.[0]?.toUpperCase() || '?'}
               </Text>
-            </LinearGradient>
+            </View>
           )}
-          <LinearGradient
-            colors={Colors.gradientPink as [string, string]}
-            style={styles.avatarRing}
-          />
         </View>
 
         <Text style={styles.displayName}>{user?.display_name || 'Người dùng'}</Text>
@@ -67,31 +54,16 @@ export default function ProfileScreen({ user, playlists, onLogout }: ProfileScre
         {/* Badges row */}
         <View style={styles.badgeRow}>
           {user?.product === 'premium' && (
-            <LinearGradient
-              colors={Colors.gradientGold as [string, string]}
-              style={styles.badge}
-            >
+            <View style={styles.badge}>
               <Text style={styles.badgeText}>⭐ Premium</Text>
-            </LinearGradient>
+            </View>
           )}
           <View style={styles.badgeAlt}>
             <Text style={styles.badgeText}>🌍 {user?.country}</Text>
           </View>
         </View>
 
-        {/* Stats row */}
-        <View style={styles.statsRow}>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{formatNumber(user?.followers?.total || 0)}</Text>
-            <Text style={styles.statLabel}>Followers</Text>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{playlists.length}</Text>
-            <Text style={styles.statLabel}>Playlist</Text>
-          </View>
-        </View>
-      </LinearGradient>
+      </View>
 
       {/* Playlists */}
       {playlists.length > 0 && (
@@ -102,12 +74,9 @@ export default function ProfileScreen({ user, playlists, onLogout }: ProfileScre
               {p.images?.[0]?.url ? (
                 <Image source={{ uri: p.images[0].url }} style={styles.playlistImg} />
               ) : (
-                <LinearGradient
-                  colors={Colors.gradientCyan as [string, string]}
-                  style={styles.playlistImg}
-                >
+                <View style={styles.playlistPlaceholder}>
                   <Text style={{ fontSize: 20 }}>🎵</Text>
-                </LinearGradient>
+                </View>
               )}
               <View style={styles.playlistInfo}>
                 <Text style={styles.playlistName} numberOfLines={1}>
@@ -135,12 +104,9 @@ export default function ProfileScreen({ user, playlists, onLogout }: ProfileScre
       {/* Logout */}
       <View style={styles.logoutSection}>
         <TouchableOpacity onPress={handleLogout} activeOpacity={0.8}>
-          <LinearGradient
-            colors={[Colors.neonPink + '30', Colors.neonPink + '10']}
-            style={styles.logoutBtn}
-          >
+          <View style={styles.logoutBtn}>
             <Text style={styles.logoutText}>🚪 Đăng Xuất</Text>
-          </LinearGradient>
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -258,9 +224,9 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: Colors.textPrimary,
-    fontSize: 18,
-    fontWeight: '800',
-    marginBottom: 12,
+    fontSize: 22,
+    fontWeight: '900',
+    marginBottom: 16,
   },
   playlistItem: {
     flexDirection: 'row',
@@ -274,8 +240,14 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 8,
+  },
+  playlistPlaceholder: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: Colors.surfaceLight,
   },
   playlistInfo: {
     flex: 1,

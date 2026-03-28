@@ -8,8 +8,6 @@ import {
   Dimensions,
   StatusBar,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BarChart } from 'react-native-chart-kit';
 import { Colors } from '../constants/colors';
 import {
   SpotifyTrack,
@@ -46,20 +44,9 @@ export default function StatsScreen({
   refreshing,
   onRefresh,
 }: StatsScreenProps) {
-  // Bar chart: Top 10 tracks popularity
-  const top10 = tracks.slice(0, 10);
-  const barData = {
-    labels: top10.map((t) => t.name.slice(0, 6) + '..'),
-    datasets: [{ data: top10.map((t) => t.popularity || 0) }],
-  };
-
   const totalDuration = calcTotalDuration(tracks);
   const uniqueGenres = genres.length;
   const topGenre = genres[0]?.genre || '—';
-  const avgPopularity =
-    tracks.length > 0
-      ? Math.round(tracks.reduce((s, t) => s + t.popularity, 0) / tracks.length)
-      : 0;
 
   const timeLabel = {
     short_term: '4 tuần qua',
@@ -82,17 +69,14 @@ export default function StatsScreen({
       <StatusBar barStyle="light-content" />
 
       {/* Header */}
-      <LinearGradient
-        colors={['#1A1500', Colors.background]}
-        style={styles.header}
-      >
+      <View style={styles.header}>
         <SectionHeader
           emoji="📊"
           title="Phân Tích"
           subtitle={`Thống kê âm nhạc ${timeLabel}`}
         />
         <TimeFilter current={timeRange} onChange={setTimeRange} />
-      </LinearGradient>
+      </View>
 
       {/* Quick Stats Row */}
       <View style={styles.quickStats}>
@@ -120,43 +104,6 @@ export default function StatsScreen({
         )}
       </View>
 
-      {/* Popularity Bar Chart */}
-      {top10.length > 0 && (
-        <View style={[styles.section, styles.barSection]}>
-          <Text style={styles.sectionTitle}>🔥 Độ Phổ Biến Top 10</Text>
-          {loading ? (
-            <LoadingShimmer height={200} style={styles.chartLoading} />
-          ) : (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <BarChart
-                data={barData}
-                width={Math.max(width - 32, top10.length * 70)}
-                height={200}
-                yAxisLabel=""
-                yAxisSuffix="%"
-                chartConfig={{
-                  backgroundColor: Colors.surface,
-                  backgroundGradientFrom: Colors.surface,
-                  backgroundGradientTo: Colors.surfaceLight,
-                  decimalPlaces: 0,
-                  color: (opacity = 1) => `rgba(255, 45, 120, ${opacity})`,
-                  labelColor: () => Colors.textMuted,
-                  style: { borderRadius: 16 },
-                  barPercentage: 0.7,
-                  propsForBackgroundLines: {
-                    strokeDasharray: '',
-                    stroke: Colors.border,
-                  },
-                }}
-                style={styles.barChart}
-                showValuesOnTopOfBars
-                fromZero
-              />
-            </ScrollView>
-          )}
-        </View>
-      )}
-
       {/* Artist Stats */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>🌍 Thông Tin Nghệ Sĩ</Text>
@@ -169,35 +116,22 @@ export default function StatsScreen({
             <Text style={styles.artistStatValue}>
               {artists[0] ? formatNumber(artists[0]?.followers?.total || 0) : '—'}
             </Text>
-            <Text style={styles.artistStatLabel}>Followers nghệ sĩ #1</Text>
-          </View>
-          <View style={styles.artistStatCard}>
-            <Text style={styles.artistStatValue}>{avgPopularity}%</Text>
-            <Text style={styles.artistStatLabel}>Popularity TB</Text>
+            <Text style={styles.artistStatLabel}>Followers nghệ sĩ số 1</Text>
           </View>
         </View>
       </View>
 
       {/* Listening Personality */}
       {tracks.length > 0 && (
-        <LinearGradient
-          colors={[Colors.neonPurple + '25', Colors.neonPink + '15']}
-          style={styles.personalityCard}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
+        <View style={styles.personalityCard}>
           <Text style={styles.personalityTitle}>🧠 Tính Cách Âm Nhạc</Text>
           <Text style={styles.personalityText}>
-            {avgPopularity >= 70
-              ? '🔥 Bạn thích nhạc mainstream nổi tiếng!'
-              : avgPopularity >= 50
-              ? '⚖️ Bạn có gu âm nhạc cân bằng!'
-              : '🎨 Bạn có gu âm nhạc độc đáo và cá tính!'}
+            🎨 Bạn có gu âm nhạc độc đáo và cá tính!
           </Text>
           <Text style={styles.personalityDetail}>
             Thể loại chủ yếu: {topGenre} · {uniqueGenres} thể loại khác nhau
           </Text>
-        </LinearGradient>
+        </View>
       )}
 
       <View style={{ height: 120 }} />
@@ -252,10 +186,10 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: Colors.textPrimary,
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 22,
+    fontWeight: '900',
     paddingHorizontal: 16,
-    marginBottom: 16,
+    marginBottom: 20,
   },
   chartLoading: {
     marginHorizontal: 16,
@@ -291,10 +225,9 @@ const styles = StyleSheet.create({
   },
   personalityCard: {
     margin: 16,
-    padding: 20,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: Colors.neonPurple + '30',
+    padding: 24,
+    borderRadius: 16,
+    backgroundColor: Colors.card,
     gap: 8,
   },
   personalityTitle: {

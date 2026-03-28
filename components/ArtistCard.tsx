@@ -7,7 +7,6 @@ import {
   StyleSheet,
   Animated,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../constants/colors';
 import { SpotifyArtist, formatNumber } from '../services/spotifyApi';
 
@@ -50,26 +49,15 @@ export function ArtistCard({ artist, rank, onPress }: ArtistCardProps) {
   return (
     <Animated.View style={{ transform: [{ scale: scaleAnim }], opacity: opacityAnim }}>
       <TouchableOpacity activeOpacity={0.8} onPress={onPress}>
-        <LinearGradient
-          colors={Colors.gradientCard as [string, string]}
-          style={[styles.container, isTop3 && styles.containerTop3]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
+        <View style={styles.container}>
           {/* Rank */}
           <Text style={[styles.rankText, { color: rankColor }]}>
-            {rank <= 3 ? ['🥇', '🥈', '🥉'][rank - 1] : `#${rank}`}
+            {rank}
           </Text>
 
           {/* Artist Photo */}
-          <View style={[styles.imageWrapper, isTop3 && styles.imageWrapperTop3]}>
+          <View style={styles.imageWrapper}>
             <Image source={{ uri: artistImage }} style={styles.image} />
-            {isTop3 && (
-              <LinearGradient
-                colors={[Colors.neonPink + '40', Colors.neonPurple + '40']}
-                style={StyleSheet.absoluteFillObject}
-              />
-            )}
           </View>
 
           {/* Info */}
@@ -77,22 +65,11 @@ export function ArtistCard({ artist, rank, onPress }: ArtistCardProps) {
             <Text style={styles.name} numberOfLines={1}>
               {artist?.name || 'Vô danh'}
             </Text>
-            <Text style={styles.genre} numberOfLines={1}>
-              {topGenre}
+            <Text style={styles.followers}>
+              {followers} Người theo dõi
             </Text>
-            <View style={styles.footerRow}>
-              <Text style={styles.followers}>👥 {followers}</Text>
-              <View style={styles.popularityDot}>
-                <View
-                  style={[
-                    styles.popularityFill,
-                    { width: `${artist?.popularity || 0}%` as any },
-                  ]}
-                />
-              </View>
-            </View>
           </View>
-        </LinearGradient>
+        </View>
       </TouchableOpacity>
     </Animated.View>
   );
@@ -103,34 +80,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginHorizontal: 16,
-    marginVertical: 4,
-    padding: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    gap: 12,
-  },
-  containerTop3: {
-    borderColor: Colors.neonPink + '50',
+    marginVertical: 8,
+    paddingVertical: 8,
+    gap: 16,
   },
   rankText: {
-    fontSize: 14,
-    fontWeight: '700',
-    width: 32,
+    fontSize: 18,
+    fontWeight: '800',
+    width: 24,
     textAlign: 'center',
   },
   imageWrapper: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    overflow: 'hidden',
-  },
-  imageWrapperTop3: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    borderWidth: 2,
-    borderColor: Colors.neonPink,
+    overflow: 'hidden',
   },
   image: {
     width: '100%',
@@ -138,38 +102,17 @@ const styles = StyleSheet.create({
   },
   info: {
     flex: 1,
-    gap: 3,
+    justifyContent: 'center',
   },
   name: {
     color: Colors.textPrimary,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  genre: {
-    color: Colors.neonPurple,
-    fontSize: 11,
-    textTransform: 'capitalize',
-  },
-  footerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 4,
+    fontSize: 18,
+    fontWeight: '900',
+    marginBottom: 4,
   },
   followers: {
-    color: Colors.textMuted,
-    fontSize: 11,
-  },
-  popularityDot: {
-    flex: 1,
-    height: 3,
-    backgroundColor: Colors.border,
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  popularityFill: {
-    height: '100%',
-    backgroundColor: Colors.neonCyan,
-    borderRadius: 2,
+    color: Colors.textSecondary,
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
