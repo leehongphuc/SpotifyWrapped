@@ -39,9 +39,9 @@ export function TrackCard({ track, rank, onPress, compact = false }: TrackCardPr
   }, []);
 
   const albumImage =
-    track.album.images[0]?.url || 'https://via.placeholder.com/60';
-  const artistNames = track.artists.map((a) => a.name).join(', ');
-  const duration = formatDuration(track.duration_ms);
+    track?.album?.images?.[0]?.url || 'https://via.placeholder.com/60';
+  const artistNames = track?.artists?.map((a) => a.name).join(', ') || 'Vô danh';
+  const duration = formatDuration(track?.duration_ms || 0);
 
   const rankColor =
     rank === 1 ? Colors.gold : rank === 2 ? Colors.silver : rank === 3 ? Colors.bronze : Colors.textMuted;
@@ -72,7 +72,7 @@ export function TrackCard({ track, rank, onPress, compact = false }: TrackCardPr
           {/* Info */}
           <View style={styles.info}>
             <Text style={styles.trackName} numberOfLines={1}>
-              {track.name}
+              {track?.name || 'Vô danh'}
             </Text>
             <Text style={styles.artistName} numberOfLines={1}>
               {artistNames}
@@ -84,11 +84,11 @@ export function TrackCard({ track, rank, onPress, compact = false }: TrackCardPr
                   <View
                     style={[
                       styles.popularityBar,
-                      { width: `${track.popularity}%` as any },
+                      { width: `${track?.popularity || 0}%` as any },
                     ]}
                   />
                 </View>
-                <Text style={styles.metaText}>{track.popularity}%</Text>
+                <Text style={styles.metaText}>{track?.popularity || 0}%</Text>
               </View>
             )}
           </View>

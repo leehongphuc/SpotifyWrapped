@@ -121,8 +121,8 @@ export async function getRecentlyPlayed(limit = 50): Promise<RecentlyPlayed[]> {
 /** Phân tích thể loại nhạc từ top artists */
 export function extractGenres(artists: SpotifyArtist[]): { genre: string; count: number }[] {
   const genreMap: Record<string, number> = {};
-  artists.forEach((artist) => {
-    artist.genres.forEach((genre) => {
+  artists?.forEach((artist) => {
+    artist?.genres?.forEach((genre) => {
       genreMap[genre] = (genreMap[genre] || 0) + 1;
     });
   });

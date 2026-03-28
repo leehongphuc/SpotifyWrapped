@@ -39,9 +39,9 @@ export function ArtistCard({ artist, rank, onPress }: ArtistCardProps) {
   }, []);
 
   const artistImage =
-    artist.images[0]?.url || 'https://via.placeholder.com/80';
-  const topGenre = artist.genres[0] || 'Nhạc';
-  const followers = formatNumber(artist.followers.total);
+    artist?.images?.[0]?.url || 'https://via.placeholder.com/80';
+  const topGenre = artist?.genres?.[0] || 'Nhạc';
+  const followers = formatNumber(artist?.followers?.total || 0);
 
   const isTop3 = rank <= 3;
   const rankColor =
@@ -75,7 +75,7 @@ export function ArtistCard({ artist, rank, onPress }: ArtistCardProps) {
           {/* Info */}
           <View style={styles.info}>
             <Text style={styles.name} numberOfLines={1}>
-              {artist.name}
+              {artist?.name || 'Vô danh'}
             </Text>
             <Text style={styles.genre} numberOfLines={1}>
               {topGenre}
@@ -86,7 +86,7 @@ export function ArtistCard({ artist, rank, onPress }: ArtistCardProps) {
                 <View
                   style={[
                     styles.popularityFill,
-                    { width: `${artist.popularity}%` as any },
+                    { width: `${artist?.popularity || 0}%` as any },
                   ]}
                 />
               </View>
