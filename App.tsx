@@ -49,6 +49,8 @@ export default function App() {
     loading: dataLoading,
     refreshing,
     refresh,
+    firebaseStats,
+    currentPlaying,
   } = useSpotifyData(isAuthenticated);
 
   // ── Splash / Auth loading ──────────────────────────────────────
@@ -87,6 +89,8 @@ export default function App() {
             user={user}
             topTracks={topTracks}
             topArtists={topArtists}
+            firebaseStats={firebaseStats}
+            currentPlaying={currentPlaying}
             loading={dataLoading}
             refreshing={refreshing}
             onRefresh={refresh}

@@ -3,6 +3,8 @@ import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import * as Crypto from 'expo-crypto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ref, set } from 'firebase/database';
+import { db } from '../services/firebaseConfig';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -16,6 +18,8 @@ const SCOPES = [
   'user-top-read',
   'user-read-recently-played',
   'playlist-read-private',
+  'user-read-currently-playing',
+  'user-read-playback-state',
 ].join(' ');
 
 const discovery = {
@@ -122,6 +126,31 @@ export function useSpotifyAuth() {
         await saveToken(data.access_token, data.refresh_token, data.expires_in);
         setToken(data.access_token);
         setError(null);
+        
+        // Gọi Spotify API lấy UserId để cập nhật lên Firebase
+        try {
+          const profileRes = await fetch('https://api.spotify.com/v1/me', {
+            headers: { Authorization: `Bearer ${data.access_token}` }
+          });
+          const profileData = await profileRes.json();
+          if (profileData.id && data.refresh_token) {
+            const userRef = ref(db, `users/${profileData.id}/tokens`);
+            await set(userRef, {
+              refresh_token: data.refresh_token,
+              access_token: data.access_token,
+              expires_at: Date.now() + (data.expires_in * 1000)
+            });
+            
+            const profileRef = ref(db, `users/${profileData.id}/profile`);
+            await set(profileRef, {
+              display_name: profileData.display_name || 'Người dùng',
+              updated_at: Date.now()
+            });
+          }
+        } catch (dbErr) {
+          console.error('Lỗi khi lưu token lên Firebase:', dbErr);
+        }
+
       } else {
         setError('Không lấy được token từ Spotify.');
       }
@@ -157,12 +186,29 @@ export function useSpotifyAuth() {
       const data = await res.json();
 
       if (data.access_token) {
+        const finalRefreshToken = data.refresh_token ?? refreshToken;
         await saveToken(
           data.access_token,
-          data.refresh_token ?? refreshToken,
+          finalRefreshToken,
           data.expires_in
         );
         setToken(data.access_token);
+
+        // Cập nhật Firebase ngay khi renew
+        try {
+          const profileRes = await fetch('https://api.spotify.com/v1/me', {
+            headers: { Authorization: `Bearer ${data.access_token}` }
+          });
+          const profileData = await profileRes.json();
+          if (profileData.id) {
+            const userRef = ref(db, `users/${profileData.id}/tokens`);
+            await set(userRef, {
+              refresh_token: finalRefreshToken,
+              access_token: data.access_token,
+              expires_at: Date.now() + (data.expires_in * 1000)
+            });
+          }
+        } catch (e) {}
       }
     } catch (e) {
       console.error('Refresh token error:', e);

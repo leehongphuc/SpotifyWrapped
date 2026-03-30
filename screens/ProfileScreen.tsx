@@ -50,6 +50,12 @@ export default function ProfileScreen({ user, playlists, onLogout }: ProfileScre
 
         <Text style={styles.displayName}>{user?.display_name || 'Người dùng'}</Text>
         <Text style={styles.email}>{user?.email}</Text>
+        
+        {user?.display_name && (
+          <Text style={styles.lastfmId}>
+            Trạng thái Last.fm: Auto-link ({user.display_name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '')})
+          </Text>
+        )}
 
         {/* Badges row */}
         <View style={styles.badgeRow}>
@@ -166,6 +172,12 @@ const styles = StyleSheet.create({
   email: {
     color: Colors.textMuted,
     fontSize: 13,
+  },
+  lastfmId: {
+    color: Colors.neonCyan,
+    fontSize: 11,
+    marginTop: 4,
+    opacity: 0.8,
   },
   badgeRow: {
     flexDirection: 'row',

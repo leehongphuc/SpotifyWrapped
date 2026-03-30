@@ -11,7 +11,8 @@ import {
   Dimensions,
 } from 'react-native';
 import { Colors } from '../constants/colors';
-import { SpotifyUser, SpotifyTrack, SpotifyArtist, calcTotalDuration, formatDuration, formatNumber } from '../services/spotifyApi';
+import { SpotifyUser, SpotifyTrack, SpotifyArtist } from '../services/spotifyApi';
+import { FirebaseStats, CurrentPlaying } from '../hooks/useFirebaseStats';
 import { StatCard } from '../components/StatCard';
 import { TrackCard } from '../components/TrackCard';
 import { ArtistCard } from '../components/ArtistCard';
@@ -23,6 +24,8 @@ interface HomeScreenProps {
   user: SpotifyUser | null;
   topTracks: SpotifyTrack[];
   topArtists: SpotifyArtist[];
+  firebaseStats: FirebaseStats | null;
+  currentPlaying: CurrentPlaying | null;
   loading: boolean;
   refreshing: boolean;
   onRefresh: () => void;
@@ -32,6 +35,8 @@ export default function HomeScreen({
   user,
   topTracks,
   topArtists,
+  firebaseStats,
+  currentPlaying,
   loading,
   refreshing,
   onRefresh,
@@ -46,7 +51,6 @@ export default function HomeScreen({
     ]).start();
   }, [user]);
 
-  const totalDuration = calcTotalDuration(topTracks);
   const uniqueArtists = new Set(topTracks.flatMap((t) => t.artists.map((a) => a.id))).size;
 
   const greeting = () => {
@@ -102,31 +106,44 @@ export default function HomeScreen({
       </View>
 
       <View style={styles.body}>
-        {/* Stat Cards */}
-        <Text style={styles.sectionTitle}>📈 Thống kê nhanh</Text>
+        <Text style={styles.sectionTitle}>▶️ Đang phát (Realtime Bot)</Text>
+        {currentPlaying ? (
+          <View style={styles.playingCard}>
+            {currentPlaying.album_image ? (
+              <Image source={{ uri: currentPlaying.album_image }} style={styles.playingImage} />
+            ) : (
+              <View style={styles.playingImagePlaceholder}><Text>💿</Text></View>
+            )}
+            <View style={styles.playingInfo}>
+              <Text style={styles.playingTitle} numberOfLines={1}>{currentPlaying.track_name}</Text>
+              <Text style={styles.playingArtist} numberOfLines={1}>{currentPlaying.artist_name}</Text>
+              <View style={styles.playingWaves}>
+                 <Text style={{color: Colors.neonPink}}>ılıılıılıılıılıılı</Text>
+              </View>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.playingCard}>
+            <Text style={styles.playingTitle}>Không có bài hát nào đang phát.</Text>
+            <Text style={styles.playingArtist}>Mở Spotify để bot ghi nhận nhé!</Text>
+          </View>
+        )}
+
+        <Text style={[styles.sectionTitle, { marginTop: 24 }]}>📈 Thống kê Bot Ghi Nhận</Text>
         <View style={styles.statGrid}>
           <StatCard
-            emoji="⏱"
-            value={formatDuration(totalDuration)}
-            label="Tổng thời gian nghe"
+            emoji="🎧"
+            value={`${firebaseStats?.total_plays || 0}`}
+            label="Tổng Lượt Nghe"
             gradientColors={[Colors.neonPink, Colors.neonPurple]}
             delay={100}
           />
           <StatCard
-            emoji="🎵"
-            value={`${topTracks.length}`}
-            label="Bài hát yêu thích"
+            emoji="⏱"
+            value={`${firebaseStats?.total_minutes || 0} p`}
+            label="Tổng Phút Nghe"
             gradientColors={[Colors.neonCyan, '#3B82F6']}
             delay={200}
-          />
-        </View>
-        <View style={styles.statGrid}>
-          <StatCard
-            emoji="🎤"
-            value={`${uniqueArtists}`}
-            label="Nghệ sĩ độc đáo"
-            gradientColors={[Colors.neonGreen, Colors.neonGreen]}
-            delay={300}
           />
         </View>
 
@@ -258,6 +275,46 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     gap: 12,
     marginBottom: 12,
+  },
+  playingCard: {
+    marginHorizontal: 16,
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  playingImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 8,
+  },
+  playingImagePlaceholder: {
+    width: 64,
+    height: 64,
+    borderRadius: 8,
+    backgroundColor: Colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  playingInfo: {
+    flex: 1,
+    gap: 4,
+  },
+  playingTitle: {
+    color: Colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  playingArtist: {
+    color: Colors.textSecondary,
+    fontSize: 13,
+  },
+  playingWaves: {
+    marginTop: 4,
   },
   funCard: {
     margin: 16,

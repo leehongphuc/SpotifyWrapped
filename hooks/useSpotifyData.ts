@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useFirebaseStats, FirebaseStats, CurrentPlaying } from './useFirebaseStats';
 import {
   getMe,
   getTopTracks,
@@ -27,6 +28,9 @@ interface SpotifyData {
   refreshing: boolean;
   error: string | null;
   refresh: () => void;
+  // Firebase Data
+  firebaseStats: FirebaseStats | null;
+  currentPlaying: CurrentPlaying | null;
 }
 
 export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
@@ -40,6 +44,8 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const { stats: firebaseStats, currentPlaying, attachPlaycount, attachArtistStats } = useFirebaseStats(user?.id);
 
   const fetchData = useCallback(async (isRefresh = false) => {
     if (!isAuthenticated) return;
@@ -57,9 +63,18 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
         getRecentlyPlayed(50),
       ]);
 
+      let enrichedTracks = tracks;
+      let enrichedArtists = artists;
+      try {
+        enrichedTracks = attachPlaycount(tracks);
+        enrichedArtists = attachArtistStats(artists);
+      } catch (e) {
+        console.log('Lỗi gắp Firebase Playcount:', e);
+      }
+
       setUser(userData);
-      setTopTracks(tracks);
-      setTopArtists(artists);
+      setTopTracks(enrichedTracks);
+      setTopArtists(enrichedArtists);
       setPlaylists(playlistData);
       setRecentlyPlayed(recent);
       setGenres(extractGenres(artists));
@@ -94,5 +109,7 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
     refreshing,
     error,
     refresh,
+    firebaseStats,
+    currentPlaying,
   };
 }

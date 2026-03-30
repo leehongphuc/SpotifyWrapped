@@ -42,6 +42,7 @@ export interface SpotifyTrack {
   popularity: number;
   preview_url: string | null;
   external_urls: { spotify: string };
+  playcount?: number; // Last.fm
 }
 
 export interface SpotifyArtist {
@@ -52,6 +53,7 @@ export interface SpotifyArtist {
   popularity: number;
   followers: { total: number };
   external_urls: { spotify: string };
+  playcount?: number; // Last.fm
 }
 
 export interface SpotifyPlaylist {
@@ -132,9 +134,9 @@ export function extractGenres(artists: SpotifyArtist[]): { genre: string; count:
     .map(([genre, count]) => ({ genre, count }));
 }
 
-/** Tính tổng thời gian nghe nhạc (ms) */
+/** Tính tổng thời gian phát nhạc 50 bài gần nhất bằng (Lặp x Thời Lượng) (ms) */
 export function calcTotalDuration(tracks: SpotifyTrack[]): number {
-  return tracks.reduce((acc, t) => acc + t.duration_ms, 0);
+  return tracks.reduce((acc, t) => acc + (t.duration_ms * (t.playcount || 1)), 0);
 }
 
 /** Format ms → "X phút" */
