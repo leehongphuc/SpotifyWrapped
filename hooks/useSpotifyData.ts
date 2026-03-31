@@ -88,7 +88,8 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
       setGenres(extractGenres(artists));
     } catch (e: any) {
       console.error('SpotifyData fetch error:', e);
-      setError('Không tải được dữ liệu. Kiểm tra kết nối Internet.');
+      const msg = e.response?.data?.error?.message || e.message || 'Unknown error';
+      setError(msg);
     } finally {
       setLoading(false);
       setRefreshing(false);

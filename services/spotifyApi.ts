@@ -19,19 +19,47 @@ spotifyAxios.interceptors.request.use(async (config) => {
   return config;
 });
 
+// ─── Queue để đồng bộ hóa Refresh Token ──────────────────────────
+let isRefreshing = false;
+let refreshSubscribers: ((token: string) => void)[] = [];
+
+function subscribeTokenRefresh(cb: (token: string) => void) {
+  refreshSubscribers.push(cb);
+}
+
+function onRefreshed(token: string) {
+  refreshSubscribers.map((cb) => cb(token));
+  refreshSubscribers = [];
+}
+
 // ─── Response Interceptor — tự động refresh khi 401 ──────────────
 spotifyAxios.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config;
+    const { config, response } = error;
+    const originalRequest = config;
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Nếu là lỗi 401 (Hết hạn token) và chưa thử lại lần nào
+    if (response?.status === 401 && !originalRequest._retry) {
+      
+      // Trường hợp 1: Nếu có một yêu cầu khác đang đi Refresh Token rồi
+      if (isRefreshing) {
+        return new Promise((resolve) => {
+          subscribeTokenRefresh((token) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            resolve(spotifyAxios(originalRequest));
+          });
+        });
+      }
+
+      // Trường hợp 2: Đây là yêu cầu đầu tiên phát hiện cần Refresh
       originalRequest._retry = true;
+      isRefreshing = true;
 
       try {
         const refreshToken = await AsyncStorage.getItem(REFRESH_KEY);
 
-        if (!refreshToken) throw new Error('No refresh token');
+        if (!refreshToken) throw new Error('No refresh token available');
 
         const body = new URLSearchParams({
           grant_type: 'refresh_token',
@@ -47,9 +75,11 @@ spotifyAxios.interceptors.response.use(
 
         const data = await res.json();
 
-        if (!data.access_token) throw new Error('Refresh failed');
+        if (!data.access_token) {
+          throw new Error('Refresh failed - no access token in response');
+        }
 
-        // Lưu token mới
+        // Lưu token mới vào bộ nhớ
         const expiryTime = Date.now() + data.expires_in * 1000;
         await AsyncStorage.setItem(TOKEN_KEY, data.access_token);
         await AsyncStorage.setItem(EXPIRY_KEY, expiryTime.toString());
@@ -57,18 +87,20 @@ spotifyAxios.interceptors.response.use(
           await AsyncStorage.setItem(REFRESH_KEY, data.refresh_token);
         }
 
-        // Retry request gốc với token mới
+        // Thông báo cho các request đang xếp hàng
+        onRefreshed(data.access_token);
+
+        // Chạy lại chính cái request gốc này
         originalRequest.headers.Authorization = `Bearer ${data.access_token}`;
         return spotifyAxios(originalRequest);
 
       } catch (refreshError) {
-        // Refresh thất bại → xoá token → bắt user login lại
-        await AsyncStorage.multiRemove([
-          TOKEN_KEY,
-          REFRESH_KEY,
-          EXPIRY_KEY,
-        ]);
-        console.error('Token refresh failed, logging out:', refreshError);
+        // Refresh thất bại (ví dụ Refresh Token cũng hết hạn) -> Xóa sạch để đăng xuất
+        await AsyncStorage.multiRemove([TOKEN_KEY, REFRESH_KEY, EXPIRY_KEY]);
+        console.error('CRITICAL: Refresh token failed, logged out.', refreshError);
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
 

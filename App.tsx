@@ -135,13 +135,22 @@ function AppContent() {
         borderWidth: 1, borderColor: '#1DB954'
       }}>
         <Text style={{ color: '#1DB954', fontSize: 11, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
-          auth: {isAuthenticated ? '✅' : '❌'} {authError ? `(Err: ${authError.slice(0, 20)}...)` : ''}{'\n'}
+          auth: {isAuthenticated ? '✅' : '❌'} {authError ? `(AE: ${authError.slice(0, 15)})` : ''}{'\n'}
           user: {user?.display_name || 'null'} ({user?.id || 'no-id'}){'\n'}
-          tracks: {topTracks?.length || 0}{'\n'}
-          artists: {topArtists?.length || 0}{'\n'}
-          loading: {dataLoading ? '⏳' : '✅'}{'\n'}
-          error: {dataError || 'none'}
+          tracks: {topTracks?.length || 0} | artists: {topArtists?.length || 0}{'\n'}
+          loading: {dataLoading ? '⏳' : '✅'} | error: {dataError || 'none'}
         </Text>
+        
+        {/* Nút bấm cứu cánh khi bị kẹt */}
+        <TouchableOpacity 
+          onPress={logout}
+          style={{ 
+            marginTop: 10, backgroundColor: '#1DB954', padding: 6, 
+            borderRadius: 4, alignItems: 'center' 
+          }}
+        >
+          <Text style={{ color: 'white', fontSize: 10, fontWeight: '700' }}>FORCE LOGOUT & CLEAN STORAGE</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Content cần biết tab bar cao bao nhiêu để không bị che */}
