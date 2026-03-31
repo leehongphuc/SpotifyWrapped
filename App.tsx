@@ -129,21 +129,20 @@ function AppContent() {
       <StatusBar barStyle="light-content" backgroundColor={Colors.background} />
 
       {/* DEBUG OVERLAY — xoá sau khi fix xong */}
-      {__DEV__ && (
-        <View style={{
-          position: 'absolute', top: 60, left: 10, right: 10,
-          backgroundColor: 'rgba(0,0,0,0.85)', padding: 10, zIndex: 999, borderRadius: 8
-        }}>
-          <Text style={{ color: '#1DB954', fontSize: 11, fontFamily: 'monospace' }}>
-            auth: {isAuthenticated ? '✅' : '❌'}{'\n'}
-            user: {user?.display_name || 'null'}{'\n'}
-            tracks: {topTracks.length}{'\n'}
-            artists: {topArtists.length}{'\n'}
-            loading: {dataLoading ? '⏳' : '✅'}{'\n'}
-            error: {dataError || 'none'}
-          </Text>
-        </View>
-      )}
+      <View style={{
+        position: 'absolute', top: 60, left: 10, right: 10,
+        backgroundColor: 'rgba(0,0,0,0.9)', padding: 12, zIndex: 999, borderRadius: 8,
+        borderWidth: 1, borderColor: '#1DB954'
+      }}>
+        <Text style={{ color: '#1DB954', fontSize: 11, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
+          auth: {isAuthenticated ? '✅' : '❌'} {authError ? `(Err: ${authError.slice(0, 20)}...)` : ''}{'\n'}
+          user: {user?.display_name || 'null'} ({user?.id || 'no-id'}){'\n'}
+          tracks: {topTracks?.length || 0}{'\n'}
+          artists: {topArtists?.length || 0}{'\n'}
+          loading: {dataLoading ? '⏳' : '✅'}{'\n'}
+          error: {dataError || 'none'}
+        </Text>
+      </View>
 
       {/* Content cần biết tab bar cao bao nhiêu để không bị che */}
       <View style={[styles.content, { paddingBottom: tabBarHeight }]}>
