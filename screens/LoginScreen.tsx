@@ -20,266 +20,254 @@ interface LoginScreenProps {
 }
 
 export default function LoginScreen({ onLogin, loading, error }: LoginScreenProps) {
-  // Animations
-  const logoScale = useRef(new Animated.Value(0)).current;
-  const logoOpacity = useRef(new Animated.Value(0)).current;
-  const titleY = useRef(new Animated.Value(40)).current;
-  const titleOpacity = useRef(new Animated.Value(0)).current;
-  const btnScale = useRef(new Animated.Value(0.8)).current;
-  const btnOpacity = useRef(new Animated.Value(0)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const fadeIn = useRef(new Animated.Value(0)).current;
+  const titleY = useRef(new Animated.Value(24)).current;
+  const btnY = useRef(new Animated.Value(32)).current;
 
   useEffect(() => {
-    // Sequence: Logo → Title → Button
-    Animated.sequence([
-      Animated.parallel([
-        Animated.spring(logoScale, { toValue: 1, tension: 50, useNativeDriver: true }),
-        Animated.timing(logoOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
-      ]),
-      Animated.parallel([
-        Animated.timing(titleY, { toValue: 0, duration: 500, useNativeDriver: true }),
-        Animated.timing(titleOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
-      ]),
-      Animated.parallel([
-        Animated.spring(btnScale, { toValue: 1, tension: 60, useNativeDriver: true }),
-        Animated.timing(btnOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
-      ]),
+    Animated.stagger(120, [
+      Animated.timing(fadeIn, { toValue: 1, duration: 900, useNativeDriver: true }),
+      Animated.timing(titleY, { toValue: 0, duration: 700, useNativeDriver: true }),
+      Animated.timing(btnY, { toValue: 0, duration: 600, useNativeDriver: true }),
     ]).start();
-
-    // Pulse animation cho nút
-    const pulse = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.05, duration: 1000, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
-      ])
-    );
-    setTimeout(() => pulse.start(), 1500);
-    return () => pulse.stop();
   }, []);
 
   return (
-    <View style={styles.container}>
+    <View style={styles.root}>
       <StatusBar barStyle="light-content" />
-      <LinearGradient
-        colors={['#0D0D1A', '#1A0E2E', '#0D0D1A']}
-        style={StyleSheet.absoluteFillObject}
-      />
 
-      {/* Background blobs */}
-      <View style={[styles.blob, { top: -100, left: -80, backgroundColor: Colors.neonPink + '20' }]} />
-      <View style={[styles.blob, { bottom: 100, right: -80, backgroundColor: Colors.neonCyan + '15' }]} />
-      <View style={[styles.blob, { top: height * 0.4, left: width * 0.3, backgroundColor: Colors.neonPurple + '15' }]} />
+      {/* Subtle radial glow top */}
+      <View style={styles.glowTop} />
+      {/* Subtle glow bottom */}
+      <View style={styles.glowBottom} />
 
-      <View style={styles.content}>
-        {/* Logo */}
-        <Animated.View
-          style={[
-            styles.logoContainer,
-            { transform: [{ scale: logoScale }], opacity: logoOpacity },
-          ]}
-        >
-          <LinearGradient
-            colors={Colors.gradientPink as [string, string]}
-            style={styles.logoGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
-            <Text style={styles.logoEmoji}>🎵</Text>
-          </LinearGradient>
+      {/* Thin horizontal rule accent */}
+      <View style={styles.topRule} />
+
+      <Animated.View style={[styles.content, { opacity: fadeIn }]}>
+
+        {/* Wordmark / Logo */}
+        <Animated.View style={[styles.logoArea, { transform: [{ translateY: titleY }] }]}>
+          <View style={styles.logoMark}>
+            <Text style={styles.logoGlyph}>♪</Text>
+          </View>
+          <Text style={styles.appName}>WRAPPED</Text>
+          <Text style={styles.appSub}>YOUR MUSIC · YOUR STORY</Text>
         </Animated.View>
 
-        {/* Title */}
-        <Animated.View
-          style={{
-            transform: [{ translateY: titleY }],
-            opacity: titleOpacity,
-            alignItems: 'center',
-          }}
-        >
-          <Text style={styles.appName}>Spotify Wrapped</Text>
-          <Text style={styles.subtitle}>
-            Khám phá âm nhạc{'\n'}của chính bạn 🎧
-          </Text>
-        </Animated.View>
+        {/* Divider */}
+        <View style={styles.dividerRow}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerDot}>◆</Text>
+          <View style={styles.dividerLine} />
+        </View>
 
-        {/* Feature bullets */}
-        <Animated.View style={[styles.features, { opacity: titleOpacity }]}>
+        {/* Feature list — clean, no emoji overload */}
+        <Animated.View style={[styles.features, { transform: [{ translateY: btnY }] }]}>
           {[
-            { icon: '🎵', text: 'Top bài hát yêu thích' },
-            { icon: '🎤', text: 'Top nghệ sĩ hàng đầu' },
-            { icon: '📊', text: 'Thống kê âm nhạc cá nhân' },
-            { icon: '🎭', text: 'Phân tích thể loại nhạc' },
-          ].map((f, i) => (
-            <View key={i} style={styles.featureItem}>
-              <Text style={styles.featureIcon}>{f.icon}</Text>
-              <Text style={styles.featureText}>{f.text}</Text>
+            ['Top Tracks', 'Bài hát bạn nghe nhiều nhất'],
+            ['Top Artists', 'Nghệ sĩ gắn liền với bạn'],
+            ['Listening DNA', 'Phân tích thể loại cá nhân'],
+            ['Live Tracker', 'Ghi nhận lượt nghe realtime'],
+          ].map(([title, sub]) => (
+            <View key={title} style={styles.featureRow}>
+              <View style={styles.featureDot} />
+              <View>
+                <Text style={styles.featureTitle}>{title}</Text>
+                <Text style={styles.featureSub}>{sub}</Text>
+              </View>
             </View>
           ))}
         </Animated.View>
 
-        {/* Login Button */}
-        <Animated.View
-          style={[
-            styles.btnWrapper,
-            {
-              transform: [{ scale: btnScale }, { scale: pulseAnim }],
-              opacity: btnOpacity,
-            },
-          ]}
-        >
+        {/* CTA */}
+        <Animated.View style={[styles.btnWrap, { transform: [{ translateY: btnY }] }]}>
           <TouchableOpacity
-            activeOpacity={0.85}
+            activeOpacity={0.82}
             onPress={onLogin}
             disabled={loading}
+            style={styles.btn}
           >
             <LinearGradient
-              colors={Colors.gradientSpotify as [string, string]}
-              style={styles.loginBtn}
+              colors={['#1DB954', '#17A349']}
+              style={styles.btnGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
             >
-              {loading ? (
-                <Text style={styles.loginBtnText}>Đang đăng nhập...</Text>
-              ) : (
-                <>
-                  <Text style={styles.spotifyIcon}>🎧</Text>
-                  <Text style={styles.loginBtnText}>Đăng nhập với Spotify</Text>
-                </>
-              )}
+              <Text style={styles.btnText}>
+                {loading ? 'Đang kết nối…' : 'Kết nối Spotify'}
+              </Text>
             </LinearGradient>
           </TouchableOpacity>
+
+          {error && (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
+
+          <Text style={styles.footnote}>Cần tài khoản Spotify để tiếp tục</Text>
         </Animated.View>
 
-        {/* Error */}
-        {error && (
-          <View style={styles.errorBox}>
-            <Text style={styles.errorText}>⚠️ {error}</Text>
-          </View>
-        )}
+      </Animated.View>
 
-        {/* Footnote */}
-        <Animated.Text style={[styles.footnote, { opacity: btnOpacity }]}>
-          Cần tài khoản Spotify để tiếp tục
-        </Animated.Text>
-      </View>
+      {/* Bottom rule */}
+      <View style={styles.bottomRule} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
     backgroundColor: Colors.background,
+    justifyContent: 'center',
   },
-  blob: {
+  glowTop: {
     position: 'absolute',
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    filter: 'blur(80px)',
+    top: -120,
+    alignSelf: 'center',
+    width: 320,
+    height: 320,
+    borderRadius: 160,
+    backgroundColor: Colors.gold,
+    opacity: 0.04,
+  },
+  glowBottom: {
+    position: 'absolute',
+    bottom: -100,
+    right: -60,
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: '#1DB954',
+    opacity: 0.05,
+  },
+  topRule: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: Colors.border,
+  },
+  bottomRule: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: Colors.border,
   },
   content: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
     paddingHorizontal: 32,
-    gap: 24,
+    gap: 40,
   },
-  logoContainer: {
-    shadowColor: Colors.neonPink,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 30,
-    elevation: 20,
+  logoArea: {
+    alignItems: 'center',
+    gap: 10,
   },
-  logoGradient: {
-    width: 100,
-    height: 100,
-    borderRadius: 30,
+  logoMark: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 1,
+    borderColor: Colors.gold,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 8,
   },
-  logoEmoji: {
-    fontSize: 48,
+  logoGlyph: {
+    color: Colors.gold,
+    fontSize: 30,
   },
   appName: {
     color: Colors.textPrimary,
-    fontSize: 32,
-    fontWeight: '900',
-    textAlign: 'center',
-    letterSpacing: -0.5,
+    fontSize: 34,
+    fontWeight: '800',
+    letterSpacing: 10,
   },
-  subtitle: {
-    color: Colors.textSecondary,
-    fontSize: 16,
-    textAlign: 'center',
-    marginTop: 8,
-    lineHeight: 24,
+  appSub: {
+    color: Colors.textMuted,
+    fontSize: 10,
+    letterSpacing: 4,
+    fontWeight: '500',
   },
-  features: {
-    alignSelf: 'stretch',
-    gap: 10,
-  },
-  featureItem: {
+  dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
   },
-  featureIcon: {
-    fontSize: 20,
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.border,
   },
-  featureText: {
-    color: Colors.textSecondary,
-    fontSize: 14,
-    fontWeight: '500',
+  dividerDot: {
+    color: Colors.goldDim,
+    fontSize: 8,
   },
-  btnWrapper: {
-    alignSelf: 'stretch',
-    shadowColor: Colors.neonGreen,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 10,
+  features: {
+    gap: 16,
   },
-  loginBtn: {
+  featureRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 50,
-    gap: 10,
+    alignItems: 'flex-start',
+    gap: 14,
   },
-  spotifyIcon: {
-    fontSize: 22,
+  featureDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.gold,
+    marginTop: 6,
   },
-  loginBtnText: {
-    color: '#FFF',
-    fontSize: 17,
-    fontWeight: '800',
+  featureTitle: {
+    color: Colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '700',
     letterSpacing: 0.3,
   },
+  featureSub: {
+    color: Colors.textMuted,
+    fontSize: 12,
+    marginTop: 1,
+  },
+  btnWrap: {
+    gap: 16,
+    alignItems: 'center',
+  },
+  btn: {
+    alignSelf: 'stretch',
+    borderRadius: 6,
+    overflow: 'hidden',
+  },
+  btnGradient: {
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  btnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+  },
   errorBox: {
-    backgroundColor: '#FF2D7820',
+    backgroundColor: '#2A1010',
     borderWidth: 1,
-    borderColor: Colors.neonPink,
-    borderRadius: 12,
+    borderColor: '#5A2020',
+    borderRadius: 6,
     padding: 12,
     alignSelf: 'stretch',
   },
   errorText: {
-    color: Colors.neonPink,
-    fontSize: 13,
+    color: '#D08080',
+    fontSize: 12,
     textAlign: 'center',
   },
   footnote: {
     color: Colors.textMuted,
-    fontSize: 12,
-    textAlign: 'center',
+    fontSize: 11,
+    letterSpacing: 0.5,
   },
 });

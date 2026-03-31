@@ -18,7 +18,7 @@ import {
   formatNumber,
 } from '../services/spotifyApi';
 import { GenreChart } from '../components/GenreChart';
-import { TimeFilter, SectionHeader } from '../components/UIComponents';
+import { TimeFilter } from '../components/UIComponents';
 import { LoadingShimmer } from '../components/LoadingShimmer';
 
 const { width } = Dimensions.get('window');
@@ -49,9 +49,9 @@ export default function StatsScreen({
   const topGenre = genres[0]?.genre || '—';
 
   const timeLabel = {
-    short_term: '4 tuần qua',
-    medium_term: '6 tháng qua',
-    long_term: 'mọi thời đại',
+    short_term: '4 Weeks',
+    medium_term: '6 Months',
+    long_term: 'All Time',
   }[timeRange];
 
   return (
@@ -59,82 +59,87 @@ export default function StatsScreen({
       style={styles.container}
       showsVerticalScrollIndicator={false}
       refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          tintColor={Colors.neonYellow}
-        />
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.gold} />
       }
     >
       <StatusBar barStyle="light-content" />
 
       {/* Header */}
       <View style={styles.header}>
-        <SectionHeader
-          emoji="📊"
-          title="Phân Tích"
-          subtitle={`Thống kê âm nhạc ${timeLabel}`}
-        />
+        <Text style={styles.eyebrow}>YOUR MUSIC</Text>
+        <Text style={styles.title}>Analytics</Text>
+        <Text style={styles.subtitle}>Insight · {timeLabel}</Text>
+        <View style={styles.rule} />
         <TimeFilter current={timeRange} onChange={setTimeRange} />
       </View>
 
       {/* Quick Stats Row */}
-      <View style={styles.quickStats}>
-        {[
-          { label: 'Tổng thời gian', value: formatDuration(totalDuration), color: Colors.neonPink },
-          { label: 'Thể loại', value: `${uniqueGenres}`, color: Colors.neonPurple },
-          { label: 'Top thể loại', value: topGenre, color: Colors.neonCyan, small: true },
-        ].map((s, i) => (
-          <View key={i} style={styles.quickStat}>
-            <Text style={[styles.quickValue, { color: s.color }, s.small && styles.quickValueSmall]}>
-              {s.value}
-            </Text>
-            <Text style={styles.quickLabel}>{s.label}</Text>
-          </View>
-        ))}
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>OVERVIEW</Text>
+        <View style={styles.quickStats}>
+          {[
+            { label: 'Time Spent', value: formatDuration(totalDuration) },
+            { label: 'Genres', value: `${uniqueGenres}` },
+            { label: 'Top Genre', value: topGenre, small: true },
+          ].map((s, i) => (
+            <View key={i} style={styles.quickStat}>
+              <Text style={[styles.quickValue, s.small && styles.quickValueSmall]} numberOfLines={1}>
+                {s.value}
+              </Text>
+              <Text style={styles.quickLabel}>{s.label}</Text>
+            </View>
+          ))}
+        </View>
       </View>
 
       {/* Genre Pie Chart */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>🎭 Thể Loại Nhạc Yêu Thích</Text>
+        <Text style={styles.sectionLabel}>GENRE DNA</Text>
         {loading ? (
-          <LoadingShimmer height={200} style={styles.chartLoading} />
+          <LoadingShimmer height={180} style={styles.chartLoading} />
         ) : (
-          <GenreChart genres={genres} />
+          <View style={styles.chartContainer}>
+            <GenreChart genres={genres} />
+          </View>
         )}
       </View>
 
       {/* Artist Stats */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>🌍 Thông Tin Nghệ Sĩ</Text>
+        <Text style={styles.sectionLabel}>LIFETIME ARTISTS</Text>
         <View style={styles.artistStats}>
           <View style={styles.artistStatCard}>
             <Text style={styles.artistStatValue}>{artists.length}</Text>
-            <Text style={styles.artistStatLabel}>Nghệ sĩ theo dõi</Text>
+            <Text style={styles.artistStatLabel}>Vòng Lặp Theo Dõi</Text>
           </View>
           <View style={styles.artistStatCard}>
-            <Text style={styles.artistStatValue}>
+            <Text style={styles.artistStatValue} numberOfLines={1}>
               {artists[0] ? formatNumber(artists[0]?.followers?.total || 0) : '—'}
             </Text>
-            <Text style={styles.artistStatLabel}>Followers nghệ sĩ số 1</Text>
+            <Text style={styles.artistStatLabel}>Followers Nghệ Sĩ Nhất</Text>
           </View>
         </View>
       </View>
 
       {/* Listening Personality */}
       {tracks.length > 0 && (
-        <View style={styles.personalityCard}>
-          <Text style={styles.personalityTitle}>🧠 Tính Cách Âm Nhạc</Text>
-          <Text style={styles.personalityText}>
-            🎨 Bạn có gu âm nhạc độc đáo và cá tính!
-          </Text>
-          <Text style={styles.personalityDetail}>
-            Thể loại chủ yếu: {topGenre} · {uniqueGenres} thể loại khác nhau
-          </Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>PERSONALITY</Text>
+          <View style={styles.factCard}>
+            <View style={styles.factGoldBar} />
+            <View style={styles.factBody}>
+              <Text style={styles.factText}>
+                Bạn có gu âm nhạc độc đáo với hệ sinh thái {uniqueGenres} thể loại.
+              </Text>
+              <Text style={styles.factSub}>
+                {topGenre} · Dòng nhạc cốt lõi
+              </Text>
+            </View>
+          </View>
         </View>
       )}
 
-      <View style={{ height: 120 }} />
+      <View style={{ height: 110 }} />
     </ScrollView>
   );
 }
@@ -145,19 +150,53 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   header: {
-    paddingTop: 56,
+    paddingTop: 60,
+    paddingHorizontal: 24,
     paddingBottom: 8,
+    gap: 4,
+  },
+  eyebrow: {
+    color: Colors.gold,
+    fontSize: 10,
+    letterSpacing: 4,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  title: {
+    color: Colors.textPrimary,
+    fontSize: 32,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    color: Colors.textMuted,
+    fontSize: 13,
+    marginBottom: 20,
+  },
+  rule: {
+    height: 1,
+    backgroundColor: Colors.border,
+    marginBottom: 16,
+  },
+  section: {
+    paddingHorizontal: 24,
+    paddingTop: 28,
+  },
+  sectionLabel: {
+    color: Colors.textMuted,
+    fontSize: 10,
+    letterSpacing: 3,
+    fontWeight: '700',
+    marginBottom: 14,
   },
   quickStats: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
     gap: 8,
   },
   quickStat: {
     flex: 1,
     backgroundColor: Colors.surface,
-    borderRadius: 14,
+    borderRadius: 4,
     padding: 12,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -165,84 +204,88 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   quickValue: {
+    color: Colors.textPrimary,
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '700',
     textAlign: 'center',
   },
   quickValueSmall: {
     fontSize: 11,
+    paddingTop: 4,
+    textTransform: 'capitalize',
   },
   quickLabel: {
     color: Colors.textMuted,
-    fontSize: 10,
+    fontSize: 9,
     textAlign: 'center',
+    letterSpacing: 0.5,
+    fontWeight: '600',
   },
-  section: {
-    paddingHorizontal: 16,
-    marginBottom: 24,
-  },
-  barSection: {
-    paddingHorizontal: 0,
-  },
-  sectionTitle: {
-    color: Colors.textPrimary,
-    fontSize: 22,
-    fontWeight: '900',
-    paddingHorizontal: 16,
-    marginBottom: 20,
+  chartContainer: {
+    backgroundColor: Colors.surface,
+    padding: 16,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   chartLoading: {
-    marginHorizontal: 16,
-    borderRadius: 16,
-  },
-  barChart: {
-    borderRadius: 16,
-    marginHorizontal: 16,
+    borderRadius: 4,
   },
   artistStats: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
   },
   artistStatCard: {
     flex: 1,
     backgroundColor: Colors.surface,
-    borderRadius: 14,
-    padding: 14,
+    borderRadius: 4,
+    padding: 16,
     borderWidth: 1,
     borderColor: Colors.border,
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
   },
   artistStatValue: {
-    color: Colors.neonCyan,
+    color: Colors.gold,
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   artistStatLabel: {
     color: Colors.textMuted,
     fontSize: 10,
     textAlign: 'center',
-  },
-  personalityCard: {
-    margin: 16,
-    padding: 24,
-    borderRadius: 16,
-    backgroundColor: Colors.card,
-    gap: 8,
-  },
-  personalityTitle: {
-    color: Colors.textPrimary,
-    fontSize: 17,
-    fontWeight: '800',
-  },
-  personalityText: {
-    color: Colors.textSecondary,
-    fontSize: 15,
     fontWeight: '600',
   },
-  personalityDetail: {
-    color: Colors.textMuted,
-    fontSize: 12,
+  factCard: {
+    flexDirection: 'row',
+    backgroundColor: Colors.surface,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    overflow: 'hidden',
+  },
+  factGoldBar: {
+    width: 3,
+    backgroundColor: Colors.gold,
+  },
+  factBody: {
+    flex: 1,
+    padding: 16,
+    gap: 2,
+  },
+  factText: {
+    color: Colors.textPrimary,
+    fontSize: 13,
+    fontWeight: '600',
+    lineHeight: 20,
+    fontStyle: 'italic',
+    marginBottom: 4,
+  },
+  factSub: {
+    color: Colors.gold,
+    fontSize: 11,
+    letterSpacing: 0.5,
+    fontWeight: '600',
     textTransform: 'capitalize',
   },
 });

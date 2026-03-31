@@ -20,103 +20,96 @@ interface ProfileScreenProps {
 
 export default function ProfileScreen({ user, playlists, onLogout }: ProfileScreenProps) {
   const handleLogout = () => {
-    Alert.alert(
-      'Đăng xuất',
-      'Bạn có chắc muốn đăng xuất không?',
-      [
-        { text: 'Huỷ', style: 'cancel' },
-        { text: 'Đăng xuất', style: 'destructive', onPress: onLogout },
-      ]
-    );
+    Alert.alert('Đăng xuất', 'Bạn có chắc muốn đăng xuất không?', [
+      { text: 'Huỷ', style: 'cancel' },
+      { text: 'Đăng xuất', style: 'destructive', onPress: onLogout },
+    ]);
   };
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <StatusBar barStyle="light-content" />
 
-      {/* Profile Header */}
+      {/* Header */}
       <View style={styles.header}>
-        <View style={styles.avatarWrapper}>
+        <Text style={styles.eyebrow}>PROFILE</Text>
+        <View style={styles.profileRow}>
           {user?.images?.[0]?.url ? (
             <Image source={{ uri: user.images[0].url }} style={styles.avatar} />
           ) : (
-            <View style={styles.avatarPlaceholder}>
+            <View style={styles.avatarFallback}>
               <Text style={styles.avatarInitial}>
                 {user?.display_name?.[0]?.toUpperCase() || '?'}
               </Text>
             </View>
           )}
-        </View>
-
-        <Text style={styles.displayName}>{user?.display_name || 'Người dùng'}</Text>
-        <Text style={styles.email}>{user?.email}</Text>
-        
-        {user?.display_name && (
-          <Text style={styles.lastfmId}>
-            Trạng thái Last.fm: Auto-link ({user.display_name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '')})
-          </Text>
-        )}
-
-        {/* Badges row */}
-        <View style={styles.badgeRow}>
-          {user?.product === 'premium' && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>⭐ Premium</Text>
+          <View style={styles.profileInfo}>
+            <Text style={styles.displayName} numberOfLines={1}>
+              {user?.display_name || 'Người dùng'}
+            </Text>
+            <Text style={styles.email} numberOfLines={1}>{user?.email}</Text>
+            <View style={styles.badgeRow}>
+              {user?.product === 'premium' && (
+                <View style={styles.badgeGold}>
+                  <Text style={styles.badgeGoldText}>PREMIUM</Text>
+                </View>
+              )}
+              {user?.country && (
+                <View style={styles.badgeMuted}>
+                  <Text style={styles.badgeMutedText}>{user.country}</Text>
+                </View>
+              )}
             </View>
-          )}
-          <View style={styles.badgeAlt}>
-            <Text style={styles.badgeText}>🌍 {user?.country}</Text>
           </View>
         </View>
-
+        <View style={styles.rule} />
       </View>
 
       {/* Playlists */}
       {playlists.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🎵 Playlist của tôi</Text>
+          <Text style={styles.sectionLabel}>PLAYLISTS</Text>
           {playlists.map((p) => (
-            <View key={p.id} style={styles.playlistItem}>
+            <View key={p.id} style={styles.playlistRow}>
               {p.images?.[0]?.url ? (
                 <Image source={{ uri: p.images[0].url }} style={styles.playlistImg} />
               ) : (
-                <View style={styles.playlistPlaceholder}>
-                  <Text style={{ fontSize: 20 }}>🎵</Text>
+                <View style={styles.playlistImgFallback}>
+                  <Text style={{ color: Colors.textMuted }}>♪</Text>
                 </View>
               )}
               <View style={styles.playlistInfo}>
-                <Text style={styles.playlistName} numberOfLines={1}>
-                  {p?.name || 'Playlist'}
-                </Text>
-                <Text style={styles.playlistCount}>{p?.tracks?.total || 0} bài hát</Text>
+                <Text style={styles.playlistName} numberOfLines={1}>{p?.name}</Text>
+                <Text style={styles.playlistCount}>{p?.tracks?.total ?? 0} tracks</Text>
               </View>
             </View>
           ))}
         </View>
       )}
 
-      {/* App Info */}
+      {/* About */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>ℹ️ Về Ứng Dụng</Text>
-        <View style={styles.infoCard}>
-          <Text style={styles.infoText}>🎵 Spotify Wrapped Teen</Text>
-          <Text style={styles.infoSub}>Phiên bản 1.0.0</Text>
-          <Text style={styles.infoDesc}>
-            Khám phá thống kê âm nhạc cá nhân của bạn — anytime, not just December! 🎉
-          </Text>
+        <Text style={styles.sectionLabel}>ABOUT</Text>
+        <View style={styles.aboutCard}>
+          <View style={styles.aboutGoldBar} />
+          <View style={styles.aboutBody}>
+            <Text style={styles.aboutTitle}>Spotify Wrapped</Text>
+            <Text style={styles.aboutVersion}>Version 1.0.0</Text>
+            <Text style={styles.aboutDesc}>
+              Khám phá thống kê âm nhạc cá nhân của bạn — anytime, not just December.
+            </Text>
+          </View>
         </View>
       </View>
 
       {/* Logout */}
-      <View style={styles.logoutSection}>
-        <TouchableOpacity onPress={handleLogout} activeOpacity={0.8}>
-          <View style={styles.logoutBtn}>
-            <Text style={styles.logoutText}>🚪 Đăng Xuất</Text>
-          </View>
+      <View style={styles.section}>
+        <TouchableOpacity onPress={handleLogout} activeOpacity={0.75} style={styles.logoutBtn}>
+          <Text style={styles.logoutText}>Đăng xuất</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={{ height: 120 }} />
+      <View style={{ height: 110 }} />
     </ScrollView>
   );
 }
@@ -126,144 +119,133 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
+
+  /* Header */
   header: {
-    paddingTop: 70,
-    paddingBottom: 32,
-    alignItems: 'center',
-    gap: 8,
+    paddingTop: 60,
+    paddingHorizontal: 24,
+    paddingBottom: 0,
+    gap: 16,
   },
-  avatarWrapper: {
-    position: 'relative',
-    marginBottom: 8,
+  eyebrow: {
+    color: Colors.gold,
+    fontSize: 10,
+    letterSpacing: 4,
+    fontWeight: '700',
+  },
+  profileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
   },
   avatar: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    borderWidth: 3,
-    borderColor: '#FFF',
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
-  avatarPlaceholder: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+  avatarFallback: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: Colors.surfaceLight,
+    borderWidth: 1,
+    borderColor: Colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarInitial: {
-    color: '#FFF',
-    fontSize: 36,
-    fontWeight: '800',
-  },
-  avatarRing: {
-    position: 'absolute',
-    top: -3,
-    left: -3,
-    right: -3,
-    bottom: -3,
-    borderRadius: 51,
-    opacity: 0.5,
-  },
-  displayName: {
-    color: Colors.textPrimary,
-    fontSize: 24,
-    fontWeight: '900',
-  },
-  email: {
-    color: Colors.textMuted,
-    fontSize: 13,
-  },
-  lastfmId: {
-    color: Colors.neonCyan,
-    fontSize: 11,
-    marginTop: 4,
-    opacity: 0.8,
-  },
-  badgeRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 4,
-  },
-  badge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 20,
-  },
-  badgeAlt: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 20,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  badgeText: {
-    color: '#FFF',
-    fontSize: 12,
+    color: Colors.gold,
+    fontSize: 28,
     fontWeight: '700',
   },
-  statsRow: {
-    flexDirection: 'row',
-    backgroundColor: Colors.surface,
-    borderRadius: 16,
-    marginTop: 16,
-    marginHorizontal: 40,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  statItem: {
+  profileInfo: {
     flex: 1,
-    alignItems: 'center',
-    gap: 2,
+    gap: 4,
   },
-  statValue: {
+  displayName: {
     color: Colors.textPrimary,
     fontSize: 20,
     fontWeight: '800',
   },
-  statLabel: {
+  email: {
     color: Colors.textMuted,
     fontSize: 12,
   },
-  divider: {
-    width: 1,
+  badgeRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 4,
+  },
+  badgeGold: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: Colors.goldDim,
+  },
+  badgeGoldText: {
+    color: Colors.gold,
+    fontSize: 9,
+    letterSpacing: 1.5,
+    fontWeight: '700',
+  },
+  badgeMuted: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  badgeMutedText: {
+    color: Colors.textMuted,
+    fontSize: 9,
+    letterSpacing: 1,
+    fontWeight: '600',
+  },
+  rule: {
+    height: 1,
     backgroundColor: Colors.border,
+    marginTop: 8,
   },
+
+  /* Section */
   section: {
-    padding: 16,
-    marginBottom: 8,
+    paddingHorizontal: 24,
+    paddingTop: 28,
   },
-  sectionTitle: {
-    color: Colors.textPrimary,
-    fontSize: 22,
-    fontWeight: '900',
-    marginBottom: 16,
+  sectionLabel: {
+    color: Colors.textMuted,
+    fontSize: 10,
+    letterSpacing: 3,
+    fontWeight: '700',
+    marginBottom: 14,
   },
-  playlistItem: {
+
+  /* Playlists */
+  playlistRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingVertical: 8,
+    gap: 14,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
   playlistImg: {
-    width: 48,
-    height: 48,
-    borderRadius: 8,
+    width: 44,
+    height: 44,
+    borderRadius: 2,
   },
-  playlistPlaceholder: {
-    width: 48,
-    height: 48,
-    borderRadius: 8,
+  playlistImgFallback: {
+    width: 44,
+    height: 44,
+    borderRadius: 2,
+    backgroundColor: Colors.surfaceLight,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.surfaceLight,
   },
-  playlistInfo: {
-    flex: 1,
-  },
+  playlistInfo: { flex: 1 },
   playlistName: {
     color: Colors.textPrimary,
     fontSize: 14,
@@ -271,46 +253,58 @@ const styles = StyleSheet.create({
   },
   playlistCount: {
     color: Colors.textMuted,
-    fontSize: 12,
+    fontSize: 11,
     marginTop: 2,
   },
-  infoCard: {
+
+  /* About */
+  aboutCard: {
+    flexDirection: 'row',
     backgroundColor: Colors.surface,
-    borderRadius: 16,
-    padding: 16,
-    gap: 6,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: Colors.border,
+    overflow: 'hidden',
   },
-  infoText: {
+  aboutGoldBar: {
+    width: 3,
+    backgroundColor: Colors.gold,
+  },
+  aboutBody: {
+    flex: 1,
+    padding: 16,
+    gap: 4,
+  },
+  aboutTitle: {
     color: Colors.textPrimary,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
   },
-  infoSub: {
-    color: Colors.neonGreen,
-    fontSize: 13,
+  aboutVersion: {
+    color: Colors.gold,
+    fontSize: 11,
     fontWeight: '600',
+    letterSpacing: 0.5,
   },
-  infoDesc: {
+  aboutDesc: {
     color: Colors.textSecondary,
-    fontSize: 13,
-    lineHeight: 20,
+    fontSize: 12,
+    lineHeight: 18,
     marginTop: 4,
   },
-  logoutSection: {
-    paddingHorizontal: 16,
-  },
+
+  /* Logout */
   logoutBtn: {
-    borderRadius: 16,
-    padding: 16,
-    alignItems: 'center',
     borderWidth: 1,
-    borderColor: Colors.neonPink + '40',
+    borderColor: Colors.border,
+    borderRadius: 4,
+    paddingVertical: 14,
+    alignItems: 'center',
   },
   logoutText: {
-    color: Colors.neonPink,
-    fontSize: 16,
-    fontWeight: '700',
+    color: Colors.textMuted,
+    fontSize: 14,
+    fontWeight: '600',
+    letterSpacing: 1,
   },
 });

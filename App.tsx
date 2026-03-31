@@ -25,12 +25,12 @@ import ProfileScreen from './screens/ProfileScreen';
 
 type Tab = 'home' | 'tracks' | 'artists' | 'stats' | 'profile';
 
-const TABS: { key: Tab; emoji: string; label: string }[] = [
-  { key: 'home', emoji: '🏠', label: 'Trang Chủ' },
-  { key: 'tracks', emoji: '🎵', label: 'Bài Hát' },
-  { key: 'artists', emoji: '🎤', label: 'Nghệ Sĩ' },
-  { key: 'stats', emoji: '📊', label: 'Thống Kê' },
-  { key: 'profile', emoji: '👤', label: 'Hồ Sơ' },
+const TABS: { key: Tab; label: string; icon: string }[] = [
+  { key: 'home', icon: '⌂', label: 'Home' },
+  { key: 'tracks', icon: '♪', label: 'Tracks' },
+  { key: 'artists', icon: '★', label: 'Artists' },
+  { key: 'stats', icon: '≡', label: 'Stats' },
+  { key: 'profile', icon: '👤', label: 'Profile' },
 ];
 
 export default function App() {
@@ -57,18 +57,10 @@ export default function App() {
   if (authLoading) {
     return (
       <View style={styles.splashContainer}>
-        <LinearGradient
-          colors={['#0D0D1A', '#1A0E2E', '#0D0D1A']}
-          style={StyleSheet.absoluteFillObject}
-        />
-        <LinearGradient
-          colors={Colors.gradientPink as [string, string]}
-          style={styles.splashLogo}
-        >
-          <Text style={styles.splashEmoji}>🎵</Text>
-        </LinearGradient>
-        <Text style={styles.splashTitle}>Spotify Wrapped</Text>
-        <Text style={styles.splashSub}>Đang tải...</Text>
+        <View style={styles.splashLogo}>
+          <Text style={styles.splashEmoji}>♪</Text>
+        </View>
+        <Text style={styles.splashTitle}>WRAPPED</Text>
       </View>
     );
   }
@@ -151,15 +143,7 @@ export default function App() {
 
       {/* Bottom Tab Bar */}
       <View style={styles.tabBarWrapper}>
-        <LinearGradient
-          colors={['transparent', Colors.background]}
-          style={styles.tabBarGlow}
-          pointerEvents="none"
-        />
-        <LinearGradient
-          colors={[Colors.surface, Colors.background + 'F0']}
-          style={styles.tabBar}
-        >
+        <View style={styles.tabBar}>
           {TABS.map((tab) => {
             const isActive = activeTab === tab.key;
             return (
@@ -169,24 +153,17 @@ export default function App() {
                 style={styles.tabItem}
                 activeOpacity={0.7}
               >
-                {isActive && (
-                  <LinearGradient
-                    colors={Colors.gradientPink as [string, string]}
-                    style={styles.tabActiveIndicator}
-                  />
-                )}
-                <Text style={[styles.tabEmoji, isActive && styles.tabEmojiActive]}>
-                  {tab.emoji}
+                {isActive && <View style={styles.tabActiveIndicator} />}
+                <Text style={[styles.tabIcon, isActive && styles.tabIconActive]}>
+                  {tab.icon}
                 </Text>
-                <Text
-                  style={[styles.tabLabel, isActive && styles.tabLabelActive]}
-                >
+                <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
                   {tab.label}
                 </Text>
               </TouchableOpacity>
             );
           })}
-        </LinearGradient>
+        </View>
       </View>
     </View>
   );
@@ -202,23 +179,23 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   splashLogo: {
-    width: 100,
-    height: 100,
-    borderRadius: 30,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 1,
+    borderColor: Colors.gold,
     alignItems: 'center',
     justifyContent: 'center',
   },
   splashEmoji: {
-    fontSize: 48,
+    color: Colors.gold,
+    fontSize: 28,
   },
   splashTitle: {
     color: Colors.textPrimary,
-    fontSize: 28,
-    fontWeight: '900',
-  },
-  splashSub: {
-    color: Colors.textMuted,
-    fontSize: 14,
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: 8,
   },
 
   // App
@@ -236,50 +213,47 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-  },
-  tabBarGlow: {
-    height: 20,
-    marginBottom: -1,
+    backgroundColor: Colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
   },
   tabBar: {
     flexDirection: 'row',
     paddingBottom: Platform.OS === 'ios' ? 28 : 12,
-    paddingTop: 10,
+    paddingTop: 12,
     paddingHorizontal: 8,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
     gap: 4,
   },
   tabItem: {
     flex: 1,
     alignItems: 'center',
-    gap: 3,
+    gap: 4,
     position: 'relative',
     paddingVertical: 2,
   },
   tabActiveIndicator: {
     position: 'absolute',
-    top: -10,
-    width: 32,
-    height: 3,
-    borderRadius: 2,
+    top: -12,
+    width: 24,
+    height: 2,
+    backgroundColor: Colors.gold,
+    borderRadius: 1,
   },
-  tabEmoji: {
-    fontSize: 20,
-    opacity: 0.5,
+  tabIcon: {
+    fontSize: 18,
+    color: Colors.textMuted,
   },
-  tabEmojiActive: {
-    opacity: 1,
-    fontSize: 22,
+  tabIconActive: {
+    color: Colors.gold,
   },
   tabLabel: {
     color: Colors.textMuted,
     fontSize: 9,
-    fontWeight: '500',
+    fontWeight: '600',
     textAlign: 'center',
+    letterSpacing: 0.5,
   },
   tabLabelActive: {
-    color: Colors.neonPink,
-    fontWeight: '700',
+    color: Colors.gold,
   },
 });

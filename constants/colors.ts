@@ -2,52 +2,46 @@
 // Neon + Dark aesthetic
 
 export const Colors = {
-  // Primary brand (Minimalist Pitch Black for OLED)
-  background: '#000000',
-  surface: '#121212',
-  surfaceLight: '#242424',
-  card: '#181818',
+  // ── Core Background ──────────────────────────────
+  background: '#080808',
+  surface: '#111111',
+  card: '#161616',
+  surfaceLight: '#1E1E1E',
 
-  // Solid Bold Accents (Spotify Wrapped Authentic)
-  neonPink: '#FF007F', // Authentic bold pink
-  neonPurple: '#6B00FF', // Deep pop purple
-  neonCyan: '#00F0FF',
-  neonGreen: '#1DB954', // Spotify Official Green
-  neonYellow: '#FFFB00',
-  bronze: '#FF5C00',
-
-  // Gradient combos (Rarely used now, kept for fallback)
-  gradientPink: ['#FF007F', '#cc0066'],
-  gradientCyan: ['#00F0FF', '#00cccc'],
-  gradientGold: ['#FFFB00', '#FF5C00'],
-  gradientSpotify: ['#1DB954', '#1AA34A'],
-  gradientDark: ['#000000', '#121212'],
-  gradientCard: ['#181818', '#121212'],
-
-  // Text
-  textPrimary: '#FFFFFF',
-  textSecondary: '#B3B3B3', // Standard Spotify gray
-  textMuted: '#A0A0A0',
-
-  // UI
+  // ── Borders ──────────────────────────────────────
   border: '#2A2A2A',
-  divider: '#2A2A2A',
-  overlay: 'rgba(0,0,0,0.8)',
+  borderLight: '#333333',
 
-  // Rank colors
-  gold: '#FFD700',
-  silver: '#C0C0C0',
+  // ── Text ─────────────────────────────────────────
+  textPrimary: '#F5F0E8',   // warm white, không lạnh
+  textSecondary: '#9A9490',   // warm grey
+  textMuted: '#555050',
 
-  // Music genres (chart colors)
+  // ── Accent: Gold ─────────────────────────────────
+  gold: '#C9A84C',
+  goldLight: '#E8C870',
+  goldDim: '#8A6F2E',
+
+  // ── Accent: thay neon bằng tones sang ────────────
+  neonPink: '#C9A84C',   // map → gold
+  neonCyan: '#8AAFA8',   // muted teal
+  neonPurple: '#7A6E8A',   // muted mauve
+  neonGreen: '#6A8A6E',   // muted sage
+  neonYellow: '#C9A84C',   // map → gold
+
+  // ── Medal ────────────────────────────────────────
+  silver: '#9BA3AE',
+  bronze: '#A07850',
+
+  // ── Gradients ────────────────────────────────────
+  gradientPink: ['#C9A84C', '#8A6F2E'],
+  gradientSpotify: ['#1DB954', '#158A3E'],
+
+  // ── Genre chart colors (muted, luxury) ───────────
   genreColors: [
-    '#1DB954',
-    '#FF007F',
-    '#FFFB00',
-    '#6B00FF',
-    '#00F0FF',
-    '#FF5C00',
-    '#FFFFFF',
-    '#C0C0C0',
+    '#C9A84C', '#8AAFA8', '#7A6E8A',
+    '#A07850', '#6A8A6E', '#9BA3AE',
+    '#B8866A', '#7A8AAA',
   ],
 };
 

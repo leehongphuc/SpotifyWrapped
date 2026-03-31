@@ -28,9 +28,9 @@ interface SpotifyData {
   refreshing: boolean;
   error: string | null;
   refresh: () => void;
-  // Firebase Data
   firebaseStats: FirebaseStats | null;
   currentPlaying: CurrentPlaying | null;
+  trackPlays: Record<string, any>;
 }
 
 export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
@@ -45,7 +45,7 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { stats: firebaseStats, currentPlaying, attachPlaycount, attachArtistStats } = useFirebaseStats(user?.id);
+  const { stats: firebaseStats, currentPlaying, trackPlays, attachPlaycount, attachArtistStats } = useFirebaseStats(user?.id);
 
   const fetchData = useCallback(async (isRefresh = false) => {
     if (!isAuthenticated) return;
@@ -111,5 +111,6 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
     refresh,
     firebaseStats,
     currentPlaying,
+    trackPlays,
   };
 }

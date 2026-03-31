@@ -1,13 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import {
-  View,
-  Text,
-  Image,
-  TouchableOpacity,
-  StyleSheet,
-  Animated,
-  Modal,
-  Linking,
+  View, Text, Image, TouchableOpacity,
+  StyleSheet, Animated, Modal, Linking,
 } from 'react-native';
 import { Colors } from '../constants/colors';
 import { SpotifyArtist, formatNumber } from '../services/spotifyApi';
@@ -21,106 +15,95 @@ interface ArtistCardProps {
 
 export function ArtistCard({ artist, rank, onPress }: ArtistCardProps) {
   const [modalVisible, setModalVisible] = React.useState(false);
-  const scaleAnim = useRef(new Animated.Value(0.9)).current;
-  const opacityAnim = useRef(new Animated.Value(0)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        delay: rank * 60,
-        tension: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacityAnim, {
-        toValue: 1,
-        duration: 500,
-        delay: rank * 60,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    Animated.timing(opacity, {
+      toValue: 1,
+      duration: 350,
+      delay: Math.min(rank * 40, 400),
+      useNativeDriver: true,
+    }).start();
   }, []);
 
-  const artistImage =
-    artist?.images?.[0]?.url || 'https://via.placeholder.com/80';
-  const topGenre = artist?.genres?.[0] || 'Nhạc';
-
-  const isTop3 = rank <= 3;
-  const rankColor =
-    rank === 1 ? Colors.gold : rank === 2 ? Colors.silver : rank === 3 ? Colors.bronze : Colors.textMuted;
+  const artistImage = artist?.images?.[0]?.url || '';
+  const topGenre = artist?.genres?.[0] || '';
+  const rankLabel = rank < 10 ? `0${rank}` : `${rank}`;
+  const rankColor = rank === 1 ? Colors.gold : rank === 2 ? Colors.silver : rank === 3 ? Colors.bronze : Colors.textMuted;
 
   return (
-    <Animated.View style={{ transform: [{ scale: scaleAnim }], opacity: opacityAnim }}>
-      <TouchableOpacity 
-        activeOpacity={0.8} 
-        onPress={() => {
-          if (onPress) onPress();
-          setModalVisible(true);
-        }}
+    <Animated.View style={{ opacity }}>
+      <TouchableOpacity
+        activeOpacity={0.75}
+        onPress={() => { onPress?.(); setModalVisible(true); }}
+        style={styles.container}
       >
-        <View style={styles.container}>
-          {/* Rank */}
-          <Text style={[styles.rankText, { color: rankColor }]}>
-            {rank}
-          </Text>
+        <Text style={[styles.rank, { color: rankColor }]}>{rankLabel}</Text>
 
-          {/* Artist Photo */}
-          <View style={styles.imageWrapper}>
-            <Image source={{ uri: artistImage }} style={styles.image} />
+        {artistImage ? (
+          <Image source={{ uri: artistImage }} style={styles.img} />
+        ) : (
+          <View style={[styles.img, styles.imgFallback]}>
+            <Text style={{ color: Colors.textMuted, fontSize: 18 }}>♩</Text>
           </View>
+        )}
 
-          {/* Info */}
-          <View style={styles.info}>
-            <Text style={styles.name} numberOfLines={1}>
-              {artist?.name || 'Vô danh'}
-            </Text>
-            <Text style={styles.followers}>
-              🎧 {formatNumber(artist?.playcount || 0)} lần nghe
-            </Text>
-          </View>
+        <View style={styles.info}>
+          <Text style={styles.name} numberOfLines={1}>{artist?.name || '—'}</Text>
+          {topGenre ? (
+            <Text style={styles.genre} numberOfLines={1}>{topGenre}</Text>
+          ) : null}
+          <Text style={styles.plays}>{formatNumber(artist?.playcount || 0)} lần nghe</Text>
         </View>
+
+        {rank <= 3 && <View style={[styles.topIndicator, { backgroundColor: rankColor }]} />}
       </TouchableOpacity>
 
-      {/* Artist Detail Modal */}
-      <Modal visible={modalVisible} transparent={true} animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <TouchableOpacity 
-              style={styles.closeBtn} 
-              onPress={() => setModalVisible(false)}
-            >
-              <Text style={styles.closeText}>✖</Text>
-            </TouchableOpacity>
+      {/* Modal */}
+      <Modal visible={modalVisible} transparent animationType="fade">
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setModalVisible(false)}
+        >
+          <View style={styles.modalSheet} onStartShouldSetResponder={() => true}>
+            <View style={styles.modalHandle} />
 
-            <Image source={{ uri: artistImage }} style={styles.modalImage} />
-            <Text style={styles.modalTitle} numberOfLines={2}>{artist?.name || 'Vô danh'}</Text>
-            <Text style={styles.modalArtist}>Nhạc {topGenre}</Text>
+            {artistImage ? (
+              <Image source={{ uri: artistImage }} style={styles.modalImg} />
+            ) : (
+              <View style={[styles.modalImg, styles.imgFallback]}>
+                <Text style={{ color: Colors.textMuted, fontSize: 40 }}>♩</Text>
+              </View>
+            )}
 
-            <View style={styles.statBox}>
+            <Text style={styles.modalName} numberOfLines={2}>{artist?.name}</Text>
+            {topGenre ? (
+              <Text style={styles.modalGenre}>{topGenre}</Text>
+            ) : null}
+
+            <View style={styles.statRow}>
               <View style={styles.statItem}>
-                <Text style={styles.statLabel}>LƯỢT NGHE</Text>
                 <Text style={styles.statValue}>{formatNumber(artist?.playcount || 0)}</Text>
+                <Text style={styles.statLabel}>LƯỢT NGHE</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
-                <Text style={styles.statLabel}>BÀI HÁT GHI NHẬN</Text>
                 <Text style={styles.statValue}>{(artist as any).tracks_count || 1}</Text>
+                <Text style={styles.statLabel}>BÀI GHI NHẬN</Text>
               </View>
             </View>
 
-            <TouchableOpacity 
-              style={styles.spotifyBtn} 
+            <TouchableOpacity
+              style={styles.spotifyBtn}
               onPress={() => Linking.openURL(artist.external_urls?.spotify || 'https://spotify.com')}
             >
-              <LinearGradient
-                colors={['#1DB954', '#1AA34A']}
-                style={styles.spotifyBtnBg}
-              >
+              <LinearGradient colors={['#1DB954', '#17A349']} style={styles.spotifyBtnBg}>
                 <Text style={styles.spotifyBtnText}>Mở trong Spotify</Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>
-        </View>
+        </TouchableOpacity>
       </Modal>
     </Animated.View>
   );
@@ -130,124 +113,133 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 16,
-    marginVertical: 8,
-    paddingVertical: 8,
-    gap: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    gap: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    position: 'relative',
   },
-  rankText: {
-    fontSize: 18,
-    fontWeight: '800',
-    width: 24,
-    textAlign: 'center',
+  rank: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+    width: 22,
+    textAlign: 'right',
   },
-  imageWrapper: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    overflow: 'hidden',
+  img: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
   },
-  image: {
-    width: '100%',
-    height: '100%',
-  },
-  info: {
-    flex: 1,
+  imgFallback: {
+    backgroundColor: Colors.surfaceLight,
+    alignItems: 'center',
     justifyContent: 'center',
   },
+  info: { flex: 1, gap: 2 },
   name: {
     color: Colors.textPrimary,
-    fontSize: 18,
-    fontWeight: '900',
-    marginBottom: 4,
-  },
-  followers: {
-    color: Colors.textSecondary,
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '700',
   },
+  genre: {
+    color: Colors.textMuted,
+    fontSize: 11,
+    textTransform: 'capitalize',
+  },
+  plays: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+    marginTop: 1,
+  },
+  topIndicator: {
+    position: 'absolute',
+    left: 0,
+    top: '25%',
+    bottom: '25%',
+    width: 2,
+    borderRadius: 1,
+  },
+
+  /* Modal */
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.85)',
-    justifyContent: 'center',
-    padding: 24,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'flex-end',
   },
-  modalContent: {
+  modalSheet: {
     backgroundColor: Colors.surface,
-    borderRadius: 24,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
     padding: 24,
+    paddingBottom: 40,
     alignItems: 'center',
+    gap: 12,
+    borderTopWidth: 1,
+    borderColor: Colors.border,
+  },
+  modalHandle: {
+    width: 36,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: Colors.border,
+    marginBottom: 8,
+  },
+  modalImg: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    marginBottom: 8,
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  closeBtn: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    padding: 8,
-    zIndex: 10,
-  },
-  closeText: {
-    color: Colors.textMuted,
-    fontSize: 20,
-    fontWeight: '900',
-  },
-  modalImage: {
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    marginBottom: 20,
-    marginTop: 10,
-    borderWidth: 4,
-    borderColor: Colors.border,
-  },
-  modalTitle: {
+  modalName: {
     color: Colors.textPrimary,
-    fontSize: 24,
-    fontWeight: '900',
+    fontSize: 20,
+    fontWeight: '800',
     textAlign: 'center',
-    marginBottom: 8,
+    letterSpacing: -0.3,
   },
-  modalArtist: {
-    color: Colors.textSecondary,
-    fontSize: 16,
-    fontWeight: '500',
-    textAlign: 'center',
-    marginBottom: 24,
+  modalGenre: {
+    color: Colors.textMuted,
+    fontSize: 13,
     textTransform: 'capitalize',
   },
-  statBox: {
+  statRow: {
     flexDirection: 'row',
-    backgroundColor: Colors.background,
-    borderRadius: 12,
-    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 4,
     width: '100%',
-    marginBottom: 24,
+    marginVertical: 8,
+    overflow: 'hidden',
   },
   statItem: {
     flex: 1,
     alignItems: 'center',
+    paddingVertical: 14,
+    backgroundColor: Colors.card,
+    gap: 4,
+  },
+  statValue: {
+    color: Colors.gold,
+    fontSize: 18,
+    fontWeight: '800',
   },
   statLabel: {
     color: Colors.textMuted,
-    fontSize: 10,
-    fontWeight: '800',
-    marginBottom: 4,
-    letterSpacing: 1,
-  },
-  statValue: {
-    color: Colors.neonCyan,
-    fontSize: 18,
-    fontWeight: '900',
+    fontSize: 9,
+    letterSpacing: 1.5,
+    fontWeight: '700',
   },
   statDivider: {
     width: 1,
     backgroundColor: Colors.border,
-    marginHorizontal: 16,
   },
   spotifyBtn: {
-    width: '100%',
-    borderRadius: 100,
+    alignSelf: 'stretch',
+    borderRadius: 4,
     overflow: 'hidden',
   },
   spotifyBtnBg: {
@@ -256,7 +248,8 @@ const styles = StyleSheet.create({
   },
   spotifyBtnText: {
     color: '#FFF',
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 1,
   },
 });

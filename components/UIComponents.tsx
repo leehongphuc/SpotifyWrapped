@@ -1,56 +1,135 @@
 import React, { useRef, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Animated,
-  Platform,
-  StatusBar,
-} from 'react-native';
+import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../constants/colors';
+
+// ── StatCard ─────────────────────────────────────────────────────
+
+interface StatCardProps {
+  emoji: string;
+  value: string;
+  label: string;
+  gradientColors?: [string, string];
+  delay?: number;
+}
+
+export function StatCard({
+  emoji, value, label,
+  gradientColors = [Colors.surface, Colors.surfaceLight],
+  delay = 0,
+}: StatCardProps) {
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(10)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(opacity, { toValue: 1, duration: 400, delay, useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: 350, delay, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View style={[statStyles.wrapper, { opacity, transform: [{ translateY }] }]}>
+      <LinearGradient
+        colors={gradientColors}
+        style={statStyles.card}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <Text style={statStyles.value}>{value}</Text>
+        <Text style={statStyles.label}>{label}</Text>
+      </LinearGradient>
+    </Animated.View>
+  );
+}
+
+const statStyles = StyleSheet.create({
+  wrapper: { flex: 1 },
+  card: {
+    borderRadius: 4,
+    padding: 18,
+    gap: 6,
+    minHeight: 90,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  value: {
+    color: Colors.textPrimary,
+    fontSize: 24,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+  },
+  label: {
+    color: Colors.textMuted,
+    fontSize: 10,
+    letterSpacing: 2,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+});
+
+// ── TimeFilter ───────────────────────────────────────────────────
+
+const TIME_OPTIONS = [
+  { key: 'short_term' as const, label: '4 Weeks' },
+  { key: 'medium_term' as const, label: '6 Months' },
+  { key: 'long_term' as const, label: 'All Time' },
+];
 
 interface TimeFilterProps {
   current: 'short_term' | 'medium_term' | 'long_term';
   onChange: (v: 'short_term' | 'medium_term' | 'long_term') => void;
 }
 
-const OPTIONS = [
-  { key: 'short_term' as const, label: '4 Tuần' },
-  { key: 'medium_term' as const, label: '6 Tháng' },
-  { key: 'long_term' as const, label: 'Mọi Lúc' },
-];
-
 export function TimeFilter({ current, onChange }: TimeFilterProps) {
   return (
-    <View style={styles.filterRow}>
-      {OPTIONS.map((o) => (
+    <View style={filterStyles.row}>
+      {TIME_OPTIONS.map((o) => (
         <TouchableOpacity
           key={o.key}
           onPress={() => onChange(o.key)}
-          activeOpacity={0.8}
-          style={styles.filterBtn}
+          activeOpacity={0.7}
+          style={[filterStyles.btn, current === o.key && filterStyles.btnActive]}
         >
-          {current === o.key ? (
-            <LinearGradient
-              colors={Colors.gradientPink as [string, string]}
-              style={styles.filterActive}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-            >
-              <Text style={styles.filterTextActive}>{o.label}</Text>
-            </LinearGradient>
-          ) : (
-            <View style={styles.filterInactive}>
-              <Text style={styles.filterText}>{o.label}</Text>
-            </View>
-          )}
+          <Text style={[filterStyles.btnLabel, current === o.key && filterStyles.btnLabelActive]}>
+            {o.label}
+          </Text>
         </TouchableOpacity>
       ))}
     </View>
   );
 }
+
+const filterStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  btn: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 3,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  btnActive: {
+    borderColor: Colors.gold,
+    backgroundColor: Colors.gold + '15',
+  },
+  btnLabel: {
+    color: Colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+  btnLabelActive: {
+    color: Colors.gold,
+  },
+});
+
+// ── SectionHeader ────────────────────────────────────────────────
 
 interface SectionHeaderProps {
   title: string;
@@ -60,66 +139,28 @@ interface SectionHeaderProps {
 
 export function SectionHeader({ title, subtitle, emoji }: SectionHeaderProps) {
   return (
-    <View style={styles.sectionHeader}>
-      {emoji && <Text style={styles.sectionEmoji}>{emoji}</Text>}
-      <View>
-        <Text style={styles.sectionTitle}>{title}</Text>
-        {subtitle && <Text style={styles.sectionSubtitle}>{subtitle}</Text>}
-      </View>
+    <View style={headerStyles.container}>
+      <Text style={headerStyles.title}>{title}</Text>
+      {subtitle && <Text style={headerStyles.subtitle}>{subtitle}</Text>}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  filterRow: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    gap: 8,
-    marginBottom: 16,
-  },
-  filterBtn: {
-    flex: 1,
-  },
-  filterActive: {
-    paddingVertical: 8,
-    borderRadius: 20,
-    alignItems: 'center',
-  },
-  filterInactive: {
-    paddingVertical: 8,
-    borderRadius: 20,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  filterTextActive: {
-    color: '#FFF',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  filterText: {
-    color: Colors.textMuted,
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
+const headerStyles = StyleSheet.create({
+  container: {
+    paddingHorizontal: 24,
     paddingBottom: 12,
-    gap: 10,
   },
-  sectionEmoji: {
-    fontSize: 24,
-  },
-  sectionTitle: {
+  title: {
     color: Colors.textPrimary,
-    fontSize: 20,
+    fontSize: 28,
     fontWeight: '800',
+    letterSpacing: -0.5,
   },
-  sectionSubtitle: {
+  subtitle: {
     color: Colors.textMuted,
     fontSize: 12,
-    marginTop: 2,
+    marginTop: 4,
+    letterSpacing: 0.5,
   },
 });

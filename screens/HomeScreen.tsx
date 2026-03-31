@@ -2,10 +2,9 @@ import React, { useRef, useEffect } from 'react';
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   ScrollView,
-  Image,
-  TouchableOpacity,
   Animated,
   RefreshControl,
   Dimensions,
@@ -32,32 +31,21 @@ interface HomeScreenProps {
 }
 
 export default function HomeScreen({
-  user,
-  topTracks,
-  topArtists,
-  firebaseStats,
-  currentPlaying,
-  loading,
-  refreshing,
-  onRefresh,
+  user, topTracks, topArtists,
+  firebaseStats, currentPlaying,
+  loading, refreshing, onRefresh,
 }: HomeScreenProps) {
-  const headerY = useRef(new Animated.Value(-60)).current;
-  const headerOpacity = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.spring(headerY, { toValue: 0, tension: 40, useNativeDriver: true }),
-      Animated.timing(headerOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
-    ]).start();
+    Animated.timing(fadeAnim, { toValue: 1, duration: 700, useNativeDriver: true }).start();
   }, [user]);
 
-  const uniqueArtists = new Set(topTracks.flatMap((t) => t.artists.map((a) => a.id))).size;
-
   const greeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return '🌅 Chào buổi sáng';
-    if (hour < 17) return '☀️ Chào buổi chiều';
-    return '🌙 Chào buổi tối';
+    const h = new Date().getHours();
+    if (h < 12) return 'Good morning';
+    if (h < 17) return 'Good afternoon';
+    return 'Good evening';
   };
 
   return (
@@ -65,128 +53,128 @@ export default function HomeScreen({
       style={styles.container}
       showsVerticalScrollIndicator={false}
       refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          tintColor={Colors.neonPink}
-        />
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.gold} />
       }
     >
-      {/* Header */}
-      <View style={styles.header}>
-        <Animated.View
-          style={[
-            styles.headerContent,
-            { transform: [{ translateY: headerY }], opacity: headerOpacity },
-          ]}
-        >
-          <View style={styles.userRow}>
-            {user?.images?.[0]?.url ? (
-              <Image source={{ uri: user.images[0].url }} style={styles.avatar} />
-            ) : (
-              <View style={styles.avatarPlaceholder}>
-                <Text style={styles.avatarInitial}>
-                  {user?.display_name?.[0]?.toUpperCase() || '?'}
-                </Text>
-              </View>
-            )}
-            <View style={styles.userInfo}>
-              <Text style={styles.greeting}>{greeting()}</Text>
-              <Text style={styles.userName} numberOfLines={1}>
-                {user?.display_name || 'Người dùng'}
+      {/* ── Header ── */}
+      <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
+        <View style={styles.headerTop}>
+          <View style={styles.greetBlock}>
+            <Text style={styles.greetLabel}>{greeting()}</Text>
+            <Text style={styles.greetName} numberOfLines={1}>
+              {user?.display_name || 'Listener'}
+            </Text>
+          </View>
+          {user?.images?.[0]?.url ? (
+            <Image source={{ uri: user.images[0].url }} style={styles.avatar} />
+          ) : (
+            <View style={styles.avatarFallback}>
+              <Text style={styles.avatarInitial}>
+                {user?.display_name?.[0]?.toUpperCase() || '?'}
               </Text>
             </View>
-            {user?.product === 'premium' && (
-              <View style={styles.premiumBadge}>
-                <Text style={styles.premiumText}>⭐ Premium</Text>
+          )}
+        </View>
+
+        {/* thin gold rule */}
+        <View style={styles.headerRule} />
+      </Animated.View>
+
+      {/* ── Now Playing ── */}
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>NOW PLAYING</Text>
+        {currentPlaying ? (
+          <View style={styles.nowPlayingCard}>
+            {currentPlaying.album_image ? (
+              <Image source={{ uri: currentPlaying.album_image }} style={styles.nowPlayingImg} />
+            ) : (
+              <View style={styles.nowPlayingImgFallback}>
+                <Text style={{ color: Colors.textMuted, fontSize: 24 }}>♪</Text>
               </View>
             )}
-          </View>
-        </Animated.View>
-      </View>
-
-      <View style={styles.body}>
-        <Text style={styles.sectionTitle}>▶️ Đang phát (Realtime Bot)</Text>
-        {currentPlaying ? (
-          <View style={styles.playingCard}>
-            {currentPlaying.album_image ? (
-              <Image source={{ uri: currentPlaying.album_image }} style={styles.playingImage} />
-            ) : (
-              <View style={styles.playingImagePlaceholder}><Text>💿</Text></View>
-            )}
-            <View style={styles.playingInfo}>
-              <Text style={styles.playingTitle} numberOfLines={1}>{currentPlaying.track_name}</Text>
-              <Text style={styles.playingArtist} numberOfLines={1}>{currentPlaying.artist_name}</Text>
-              <View style={styles.playingWaves}>
-                 <Text style={{color: Colors.neonPink}}>ılıılıılıılıılıılı</Text>
+            <View style={styles.nowPlayingInfo}>
+              <Text style={styles.nowPlayingTrack} numberOfLines={1}>
+                {currentPlaying.track_name}
+              </Text>
+              <Text style={styles.nowPlayingArtist} numberOfLines={1}>
+                {currentPlaying.artist_name}
+              </Text>
+              {/* minimal waveform indicator */}
+              <View style={styles.waveRow}>
+                {[8, 14, 10, 18, 12, 16, 9, 13].map((h, i) => (
+                  <View key={i} style={[styles.waveBar, { height: h }]} />
+                ))}
               </View>
             </View>
           </View>
         ) : (
-          <View style={styles.playingCard}>
-            <Text style={styles.playingTitle}>Không có bài hát nào đang phát.</Text>
-            <Text style={styles.playingArtist}>Mở Spotify để bot ghi nhận nhé!</Text>
+          <View style={styles.nowPlayingEmpty}>
+            <Text style={styles.nowPlayingEmptyText}>Không có bài hát nào đang phát</Text>
+            <Text style={styles.nowPlayingEmptySub}>Mở Spotify để bắt đầu theo dõi</Text>
           </View>
         )}
+      </View>
 
-        <Text style={[styles.sectionTitle, { marginTop: 24 }]}>📈 Thống kê Bot Ghi Nhận</Text>
-        <View style={styles.statGrid}>
+      {/* ── Stats ── */}
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>THỐNG KÊ</Text>
+        <View style={styles.statRow}>
           <StatCard
-            emoji="🎧"
-            value={`${firebaseStats?.total_plays || 0}`}
-            label="Tổng Lượt Nghe"
-            gradientColors={[Colors.neonPink, Colors.neonPurple]}
+            emoji="▶"
+            value={`${firebaseStats?.total_plays ?? 0}`}
+            label="Lượt nghe"
+            gradientColors={[Colors.gold, Colors.goldDim]}
+            delay={0}
+          />
+          <StatCard
+            emoji="◷"
+            value={`${firebaseStats?.total_minutes ?? 0}`}
+            label="Phút nghe"
+            gradientColors={['#1E1E1E', '#2A2A2A']}
             delay={100}
           />
-          <StatCard
-            emoji="⏱"
-            value={`${firebaseStats?.total_minutes || 0} p`}
-            label="Tổng Phút Nghe"
-            gradientColors={[Colors.neonCyan, '#3B82F6']}
-            delay={200}
-          />
         </View>
+      </View>
 
-        {/* Top 5 Tracks Preview */}
-        <Text style={[styles.sectionTitle, { marginTop: 24 }]}>
-          🎵 Top Bài Hát Tuần Này
-        </Text>
+      {/* ── Top Tracks ── */}
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>TOP TRACKS · TUẦN NÀY</Text>
         {loading
           ? Array.from({ length: 5 }).map((_, i) => <TrackSkeleton key={i} />)
           : topTracks.slice(0, 5).map((track, i) => (
-              <TrackCard
-                key={track.id}
-                track={track}
-                rank={i + 1}
-                compact
-              />
-            ))}
+            <TrackCard key={track.id} track={track} rank={i + 1} compact />
+          ))}
+      </View>
 
-        {/* Top 3 Artists Preview */}
-        <Text style={[styles.sectionTitle, { marginTop: 24 }]}>
-          🎤 Top Nghệ Sĩ Tuần Này
-        </Text>
+      {/* ── Top Artists ── */}
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>TOP ARTISTS · TUẦN NÀY</Text>
         {loading
           ? Array.from({ length: 3 }).map((_, i) => <TrackSkeleton key={i} />)
           : topArtists.slice(0, 3).map((artist, i) => (
-              <ArtistCard key={artist.id} artist={artist} rank={i + 1} />
-            ))}
-
-        {/* Fun Fact */}
-        {topTracks.length > 0 && (
-          <View style={styles.funCard}>
-            <Text style={styles.funTitle}>💡 Fun Fact</Text>
-            <Text style={styles.funText}>
-              Bản hit gắn liền với bạn là{' '}
-              <Text style={styles.funHighlight}>"{topTracks[0]?.name}"</Text>.
-              {'\n'}Bạn đã cày list nhạc của{' '}
-              <Text style={styles.funHighlight}>{topArtists[0]?.name}</Text> rất nhiều! 🎉
-            </Text>
-          </View>
-        )}
-
-        <View style={{ height: 100 }} />
+            <ArtistCard key={artist.id} artist={artist} rank={i + 1} />
+          ))}
       </View>
+
+      {/* ── Fun Fact ── */}
+      {topTracks.length > 0 && (
+        <View style={[styles.section, styles.factSection]}>
+          <Text style={styles.sectionLabel}>HIGHLIGHT</Text>
+          <View style={styles.factCard}>
+            <View style={styles.factGoldBar} />
+            <View style={styles.factBody}>
+              <Text style={styles.factText}>
+                "{topTracks[0]?.name}" là bản nhạc gắn liền với bạn nhất giai đoạn này.
+              </Text>
+              <Text style={styles.factSub}>
+                {topArtists[0]?.name} · Nghệ sĩ hàng đầu của bạn
+              </Text>
+            </View>
+          </View>
+        </View>
+      )}
+
+      <View style={{ height: 110 }} />
     </ScrollView>
   );
 }
@@ -196,146 +184,173 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
+
+  /* Header */
   header: {
-    paddingTop: 56,
+    paddingTop: 60,
+    paddingHorizontal: 24,
     paddingBottom: 24,
-    paddingHorizontal: 20,
-    overflow: 'hidden',
   },
-  headerBlob: {
-    position: 'absolute',
-    top: -40,
-    right: -40,
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: Colors.neonPink + '15',
-  },
-  headerContent: {},
-  userRow: {
+  headerTop: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginBottom: 20,
+  },
+  greetBlock: { gap: 2 },
+  greetLabel: {
+    color: Colors.textMuted,
+    fontSize: 12,
+    letterSpacing: 2,
+    fontWeight: '500',
+    textTransform: 'uppercase',
+  },
+  greetName: {
+    color: Colors.textPrimary,
+    fontSize: 26,
+    fontWeight: '800',
+    letterSpacing: -0.5,
   },
   avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    borderWidth: 2,
-    borderColor: Colors.neonPink,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
-  avatarPlaceholder: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+  avatarFallback: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.surfaceLight,
+    borderWidth: 1,
+    borderColor: Colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.neonPink,
   },
   avatarInitial: {
-    color: '#FFF',
-    fontSize: 24,
-    fontWeight: '800',
-  },
-  userInfo: {
-    flex: 1,
-  },
-  greeting: {
-    color: Colors.textMuted,
-    fontSize: 13,
-  },
-  userName: {
-    color: Colors.textPrimary,
-    fontSize: 20,
-    fontWeight: '800',
-  },
-  premiumBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
-    backgroundColor: Colors.gold,
-  },
-  premiumText: {
-    color: '#FFF',
-    fontSize: 11,
+    color: Colors.gold,
+    fontSize: 18,
     fontWeight: '700',
   },
-  body: {
-    paddingTop: 8,
+  headerRule: {
+    height: 1,
+    backgroundColor: Colors.border,
   },
-  sectionTitle: {
-    color: Colors.textPrimary,
-    fontSize: 22,
-    fontWeight: '900',
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+
+  /* Section */
+  section: {
+    paddingHorizontal: 24,
+    paddingTop: 28,
   },
-  statGrid: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    gap: 12,
-    marginBottom: 12,
+  sectionLabel: {
+    color: Colors.textMuted,
+    fontSize: 10,
+    letterSpacing: 3,
+    fontWeight: '700',
+    marginBottom: 14,
   },
-  playingCard: {
-    marginHorizontal: 16,
-    backgroundColor: Colors.surface,
-    borderRadius: 16,
-    padding: 16,
+
+  /* Now Playing */
+  nowPlayingCard: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: 4,
+    padding: 16,
     gap: 16,
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  playingImage: {
-    width: 64,
-    height: 64,
-    borderRadius: 8,
+  nowPlayingImg: {
+    width: 58,
+    height: 58,
+    borderRadius: 2,
   },
-  playingImagePlaceholder: {
-    width: 64,
-    height: 64,
-    borderRadius: 8,
-    backgroundColor: Colors.card,
+  nowPlayingImgFallback: {
+    width: 58,
+    height: 58,
+    borderRadius: 2,
+    backgroundColor: Colors.surfaceLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  playingInfo: {
-    flex: 1,
+  nowPlayingInfo: { flex: 1, gap: 4 },
+  nowPlayingTrack: {
+    color: Colors.textPrimary,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  nowPlayingArtist: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+  },
+  waveRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 3,
+    marginTop: 6,
+  },
+  waveBar: {
+    width: 2,
+    borderRadius: 1,
+    backgroundColor: Colors.gold,
+    opacity: 0.7,
+  },
+  nowPlayingEmpty: {
+    backgroundColor: Colors.surface,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: 20,
     gap: 4,
   },
-  playingTitle: {
-    color: Colors.textPrimary,
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  playingArtist: {
-    color: Colors.textSecondary,
-    fontSize: 13,
-  },
-  playingWaves: {
-    marginTop: 4,
-  },
-  funCard: {
-    margin: 16,
-    marginTop: 24,
-    padding: 24,
-    borderRadius: 16,
-    backgroundColor: Colors.card,
-  },
-  funTitle: {
-    color: Colors.textPrimary,
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  funText: {
+  nowPlayingEmptyText: {
     color: Colors.textSecondary,
     fontSize: 14,
-    lineHeight: 22,
+    fontWeight: '600',
   },
-  funHighlight: {
-    color: Colors.neonPink,
-    fontWeight: '700',
+  nowPlayingEmptySub: {
+    color: Colors.textMuted,
+    fontSize: 12,
+  },
+
+  /* Stats */
+  statRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+
+  /* Fact */
+  factSection: { paddingBottom: 8 },
+  factCard: {
+    flexDirection: 'row',
+    backgroundColor: Colors.surface,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    overflow: 'hidden',
+  },
+  factGoldBar: {
+    width: 3,
+    backgroundColor: Colors.gold,
+  },
+  factBody: {
+    flex: 1,
+    padding: 16,
+    gap: 6,
+  },
+  factText: {
+    color: Colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '600',
+    lineHeight: 20,
+    fontStyle: 'italic',
+  },
+  factSub: {
+    color: Colors.gold,
+    fontSize: 11,
+    letterSpacing: 0.5,
+    fontWeight: '600',
   },
 });
