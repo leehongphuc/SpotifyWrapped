@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import * as Crypto from 'expo-crypto';
@@ -266,6 +267,8 @@ export function useSpotifyAuth() {
     ]);
   }
 
+  const queryClient = useQueryClient();
+
   /** Đăng xuất */
   const logout = useCallback(async () => {
     await Promise.all([
@@ -273,8 +276,9 @@ export function useSpotifyAuth() {
       AsyncStorage.removeItem(REFRESH_KEY),
       AsyncStorage.removeItem(EXPIRY_KEY),
     ]);
+    queryClient.clear(); // 👈 Xoá toàn bộ cache khi logout
     setToken(null);
-  }, []);
+  }, [queryClient]);
 
   /** Bắt đầu đăng nhập */
   const login = useCallback(async () => {

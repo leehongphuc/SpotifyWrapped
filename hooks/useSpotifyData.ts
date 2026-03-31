@@ -1,11 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useFirebaseStats, FirebaseStats, CurrentPlaying } from './useFirebaseStats';
 import {
-  getMe,
-  getTopTracks,
-  getTopArtists,
-  getMyPlaylists,
-  getRecentlyPlayed,
   extractGenres,
   SpotifyUser,
   SpotifyTrack,
@@ -14,6 +9,7 @@ import {
   RecentlyPlayed,
   TimeRange,
 } from '../services/spotifyApi';
+import { useSpotifyQueries } from './useSpotifyQueries';
 
 interface SpotifyData {
   user: SpotifyUser | null;
@@ -34,24 +30,30 @@ interface SpotifyData {
 }
 
 export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
-  const [user, setUser] = useState<SpotifyUser | null>(null);
-  const [rawTopTracks, setRawTopTracks] = useState<SpotifyTrack[]>([]);
-  const [rawTopArtists, setRawTopArtists] = useState<SpotifyArtist[]>([]);
-  const [playlists, setPlaylists] = useState<SpotifyPlaylist[]>([]);
-  const [recentlyPlayed, setRecentlyPlayed] = useState<RecentlyPlayed[]>([]);
-  const [genres, setGenres] = useState<{ genre: string; count: number }[]>([]);
   const [timeRange, setTimeRange] = useState<TimeRange>('short_term');
-  const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const { 
-    stats: firebaseStats, 
-    currentPlaying, 
-    trackPlays, 
+  // ── React Query Hooks ──
+  const {
+    profileQuery,
+    tracksQuery,
+    artistsQuery,
+    playlistsQuery,
+    recentQuery,
+  } = useSpotifyQueries(isAuthenticated, timeRange);
+
+  const user = profileQuery.data || null;
+  const rawTopTracks = tracksQuery.data || [];
+  const rawTopArtists = artistsQuery.data || [];
+  const playlists = playlistsQuery.data || [];
+  const recentlyPlayed = recentQuery.data || [];
+
+  const {
+    stats: firebaseStats,
+    currentPlaying,
+    trackPlays,
     artistPlays,
-    attachPlaycount, 
-    attachArtistStats 
+    attachPlaycount,
+    attachArtistStats
   } = useFirebaseStats(user?.id);
 
   // ── Enriched Data ─────────────────────────────────────────────
@@ -64,54 +66,18 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
     return attachArtistStats(rawTopArtists);
   }, [rawTopArtists, trackPlays, artistPlays, attachArtistStats]);
 
-  const fetchData = useCallback(async (isRefresh = false) => {
-    if (!isAuthenticated) return;
+  const genres = useMemo(() => extractGenres(rawTopArtists), [rawTopArtists]);
 
-    if (isRefresh) setRefreshing(true);
-    else setLoading(true);
-    setError(null);
+  const loading = profileQuery.isLoading || tracksQuery.isLoading || artistsQuery.isLoading;
+  const refreshing = tracksQuery.isRefetching || artistsQuery.isRefetching;
+  const error = (profileQuery.error || tracksQuery.error || artistsQuery.error) as any;
 
-    try {
-      const [userData, tracks, artists, playlistData, recent] = await Promise.all([
-        getMe(),
-        getTopTracks(timeRange, 50),
-        getTopArtists(timeRange, 50),
-        getMyPlaylists(20),
-        getRecentlyPlayed(50),
-      ]);
-
-      setUser(userData);
-      setRawTopTracks(tracks);
-      setRawTopArtists(artists);
-      setPlaylists(playlistData);
-      setRecentlyPlayed(recent);
-      setGenres(extractGenres(artists));
-    } catch (e: any) {
-      console.error('SpotifyData fetch error:', e);
-      if (e?.response?.status === 429) {
-        const retryAfter = e?.response?.headers?.['retry-after'] || 60;
-        setError(`Rate limit. Thử lại sau ${retryAfter} giây.`);
-        
-        // Tự động retry sau thời gian chờ
-        setTimeout(() => fetchData(false), retryAfter * 1000);
-      } else {
-        const msg = e.response?.data?.error?.message || e.message || 'Unknown error';
-        setError(msg);
-      }
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [isAuthenticated, timeRange]);
-
-  // Tải dữ liệu khi đã đăng nhập hoặc khi đổi timeRange
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchData();
-    }
-  }, [isAuthenticated, timeRange]);
-
-  const refresh = useCallback(() => fetchData(true), [fetchData]);
+  const refresh = useCallback(() => {
+    tracksQuery.refetch();
+    artistsQuery.refetch();
+    playlistsQuery.refetch();
+    recentQuery.refetch();
+  }, [tracksQuery, artistsQuery, playlistsQuery, recentQuery]);
 
   return {
     user,

@@ -24,29 +24,27 @@ interface HomeScreenProps {
 }
 
 function AnimatedWave() {
-  const BASE_HEIGHTS = [8, 14, 10, 18, 12, 16, 9, 13];
-  const anims = useRef(BASE_HEIGHTS.map(h => new Animated.Value(h))).current;
+  const BASE_SCALES = [0.44, 0.78, 0.56, 1.0, 0.67, 0.89, 0.50, 0.72];
+  const anims = useRef(BASE_SCALES.map(s => new Animated.Value(s))).current;
 
   useEffect(() => {
-    const animations = anims.map((anim, i) => {
-      const minH = BASE_HEIGHTS[i] * 0.2;
-      const maxH = BASE_HEIGHTS[i];
-      return Animated.loop(
+    const animations = anims.map((anim, i) =>
+      Animated.loop(
         Animated.sequence([
           Animated.timing(anim, {
-            toValue: minH,
+            toValue: 0.15,
             duration: 250 + i * 50,
             delay: i * 70,
-            useNativeDriver: false, // height không dùng native driver được
+            useNativeDriver: true, // ✅ dùng được native driver với transform
           }),
           Animated.timing(anim, {
-            toValue: maxH,
+            toValue: BASE_SCALES[i],
             duration: 250 + i * 50,
-            useNativeDriver: false,
+            useNativeDriver: true,
           }),
         ])
-      );
-    });
+      )
+    );
 
     animations.forEach(a => a.start());
     return () => animations.forEach(a => a.stop());
@@ -57,7 +55,20 @@ function AnimatedWave() {
       {anims.map((anim, i) => (
         <Animated.View
           key={i}
-          style={[styles.waveBar, { height: anim as any }]}
+          style={[
+            styles.waveBar,
+            {
+              transform: [
+                {
+                  translateY: anim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [9, 0], // 9 = height/2 = 18/2 để căn BOTTOM
+                  }),
+                },
+                { scaleY: anim },
+              ],
+            },
+          ]}
         />
       ))}
     </View>
@@ -244,8 +255,20 @@ const styles = StyleSheet.create({
   nowPlayingInfo: { flex: 1, gap: 4 },
   nowPlayingTrack: { color: Colors.textPrimary, fontSize: 15, fontWeight: '700' },
   nowPlayingArtist: { color: Colors.textSecondary, fontSize: 12 },
-  waveRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 3, marginTop: 6 },
-  waveBar: { width: 2, borderRadius: 1, backgroundColor: Colors.gold, opacity: 0.7 },
+  waveRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 3,
+    marginTop: 6,
+    height: 18,
+  },
+  waveBar: {
+    width: 2,
+    height: 18, // luôn chiếm đúng 18px trong layout
+    borderRadius: 1,
+    backgroundColor: Colors.gold,
+    opacity: 0.7,
+  },
   nowPlayingEmpty: {
     backgroundColor: Colors.surface, borderRadius: 4,
     borderWidth: 1, borderColor: Colors.border, padding: 20, gap: 4,

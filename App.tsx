@@ -7,7 +7,11 @@ import {
   Platform,
   StatusBar,
 } from 'react-native';
-import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context'; // 👈 thêm
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { QueryClient } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useSpotifyAuth } from './hooks/useSpotifyAuth';
 import { useSpotifyData } from './hooks/useSpotifyData';
@@ -172,12 +176,31 @@ function AppContent() {
   );
 }
 
-// 👇 Wrap toàn app trong SafeAreaProvider
+// 👇 Khởi tạo QueryClient & Persister
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 phút
+      gcTime: 1000 * 60 * 60 * 24, // Giữ trong cache 24h
+    },
+  },
+});
+
+const asyncStoragePersister = createAsyncStoragePersister({
+  storage: AsyncStorage,
+});
+
+// 👇 Wrap toàn app trong SafeAreaProvider & PersistQueryClientProvider
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <AppContent />
-    </SafeAreaProvider>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{ persister: asyncStoragePersister }}
+    >
+      <SafeAreaProvider>
+        <AppContent />
+      </SafeAreaProvider>
+    </PersistQueryClientProvider>
   );
 }
 
