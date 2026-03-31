@@ -4,17 +4,14 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   Platform,
   StatusBar,
-  Animated,
-  Dimensions,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 
 import { useSpotifyAuth } from './hooks/useSpotifyAuth';
 import { useSpotifyData } from './hooks/useSpotifyData';
 import { Colors } from './constants/colors';
+import { SpotifyTrack } from './services/spotifyApi';
 
 import LoginScreen from './screens/LoginScreen';
 import HomeScreen from './screens/HomeScreen';
@@ -22,6 +19,7 @@ import TracksScreen from './screens/TracksScreen';
 import ArtistsScreen from './screens/ArtistsScreen';
 import StatsScreen from './screens/StatsScreen';
 import ProfileScreen from './screens/ProfileScreen';
+import TrackDetailScreen from './screens/TrackDetailScreen';
 
 type Tab = 'home' | 'tracks' | 'artists' | 'stats' | 'profile';
 
@@ -30,30 +28,40 @@ const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: 'tracks', icon: '♪', label: 'Tracks' },
   { key: 'artists', icon: '★', label: 'Artists' },
   { key: 'stats', icon: '≡', label: 'Stats' },
-  { key: 'profile', icon: '👤', label: 'Profile' },
+  { key: 'profile', icon: '◯', label: 'Profile' },
 ];
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('home');
 
-  const { token, loading: authLoading, error: authError, isAuthenticated, login, logout } = useSpotifyAuth();
+  // ── Track detail navigation state ──────────────────────────────
+  const [selectedTrack, setSelectedTrack] = useState<SpotifyTrack | null>(null);
+  const [selectedTrackRank, setSelectedTrackRank] = useState<number>(1);
 
   const {
-    user,
-    topTracks,
-    topArtists,
-    playlists,
-    genres,
-    timeRange,
-    setTimeRange,
-    loading: dataLoading,
-    refreshing,
-    refresh,
-    firebaseStats,
-    currentPlaying,
+    token, loading: authLoading, error: authError,
+    isAuthenticated, login, logout,
+  } = useSpotifyAuth();
+
+  const {
+    user, topTracks, topArtists, playlists, genres,
+    timeRange, setTimeRange,
+    loading: dataLoading, refreshing, refresh,
+    firebaseStats, currentPlaying,
+    trackPlays,  // <-- needed for playcount on detail screen
   } = useSpotifyData(isAuthenticated);
 
-  // ── Splash / Auth loading ──────────────────────────────────────
+  // ── Open track detail ─────────────────────────────────────────
+  const openTrackDetail = (track: SpotifyTrack, rank: number) => {
+    setSelectedTrack(track);
+    setSelectedTrackRank(rank);
+  };
+
+  const closeTrackDetail = () => {
+    setSelectedTrack(null);
+  };
+
+  // ── Splash ────────────────────────────────────────────────────
   if (authLoading) {
     return (
       <View style={styles.splashContainer}>
@@ -65,14 +73,12 @@ export default function App() {
     );
   }
 
-  // ── Not logged in → Login screen ──────────────────────────────
+  // ── Not logged in ─────────────────────────────────────────────
   if (!isAuthenticated) {
-    return (
-      <LoginScreen onLogin={login} loading={authLoading} error={authError} />
-    );
+    return <LoginScreen onLogin={login} loading={authLoading} error={authError} />;
   }
 
-  // ── Main App ──────────────────────────────────────────────────
+  // ── Screen renderer ───────────────────────────────────────────
   const renderScreen = () => {
     switch (activeTab) {
       case 'home':
@@ -86,6 +92,7 @@ export default function App() {
             loading={dataLoading}
             refreshing={refreshing}
             onRefresh={refresh}
+            onTrackPress={openTrackDetail}
           />
         );
       case 'tracks':
@@ -97,6 +104,7 @@ export default function App() {
             loading={dataLoading}
             refreshing={refreshing}
             onRefresh={refresh}
+            onTrackPress={openTrackDetail}
           />
         );
       case 'artists':
@@ -134,14 +142,20 @@ export default function App() {
     }
   };
 
+  // ── Get playcount for selected track from Firebase ────────────
+  const selectedTrackPlaycount =
+    selectedTrack && trackPlays
+      ? (trackPlays[selectedTrack.id]?.play_count || selectedTrack.playcount || 0)
+      : 0;
+
   return (
     <View style={styles.appContainer}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.background} />
 
-      {/* Main Content */}
+      {/* Main content */}
       <View style={styles.content}>{renderScreen()}</View>
 
-      {/* Bottom Tab Bar */}
+      {/* Bottom tab bar */}
       <View style={styles.tabBarWrapper}>
         <View style={styles.tabBar}>
           {TABS.map((tab) => {
@@ -165,12 +179,21 @@ export default function App() {
           })}
         </View>
       </View>
+
+      {/* Track detail overlay — rendered on top of everything */}
+      {selectedTrack && (
+        <TrackDetailScreen
+          track={selectedTrack}
+          rank={selectedTrackRank}
+          playcount={selectedTrackPlaycount}
+          onClose={closeTrackDetail}
+        />
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  // Splash
   splashContainer: {
     flex: 1,
     backgroundColor: Colors.background,
@@ -187,27 +210,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  splashEmoji: {
-    color: Colors.gold,
-    fontSize: 28,
-  },
+  splashEmoji: { color: Colors.gold, fontSize: 28 },
   splashTitle: {
     color: Colors.textPrimary,
     fontSize: 22,
     fontWeight: '800',
     letterSpacing: 8,
   },
+  appContainer: { flex: 1, backgroundColor: Colors.background },
+  content: { flex: 1 },
 
-  // App
-  appContainer: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  content: {
-    flex: 1,
-  },
-
-  // Tab Bar
   tabBarWrapper: {
     position: 'absolute',
     bottom: 0,
@@ -239,13 +251,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.gold,
     borderRadius: 1,
   },
-  tabIcon: {
-    fontSize: 18,
-    color: Colors.textMuted,
-  },
-  tabIconActive: {
-    color: Colors.gold,
-  },
+  tabIcon: { fontSize: 18, color: Colors.textMuted },
+  tabIconActive: { color: Colors.gold },
   tabLabel: {
     color: Colors.textMuted,
     fontSize: 9,
@@ -253,7 +260,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: 0.5,
   },
-  tabLabelActive: {
-    color: Colors.gold,
-  },
+  tabLabelActive: { color: Colors.gold },
 });

@@ -1,13 +1,7 @@
 import React from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  RefreshControl,
-  StatusBar,
+  View, Text, StyleSheet, FlatList, RefreshControl, StatusBar,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../constants/colors';
 import { SpotifyTrack, TimeRange } from '../services/spotifyApi';
 import { TrackCard } from '../components/TrackCard';
@@ -21,11 +15,12 @@ interface TracksScreenProps {
   loading: boolean;
   refreshing: boolean;
   onRefresh: () => void;
+  onTrackPress?: (track: SpotifyTrack, rank: number) => void;
 }
 
 export default function TracksScreen({
   tracks, timeRange, setTimeRange,
-  loading, refreshing, onRefresh,
+  loading, refreshing, onRefresh, onTrackPress,
 }: TracksScreenProps) {
   const timeLabel = {
     short_term: '4 Weeks',
@@ -54,7 +49,6 @@ export default function TracksScreen({
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-
       {loading ? (
         <>
           <ListHeader />
@@ -65,7 +59,11 @@ export default function TracksScreen({
           data={tracks}
           keyExtractor={(item) => item.id}
           renderItem={({ item, index }) => (
-            <TrackCard track={item} rank={index + 1} />
+            <TrackCard
+              track={item}
+              rank={index + 1}
+              onPress={() => onTrackPress?.(item, index + 1)}
+            />
           )}
           ListHeaderComponent={<ListHeader />}
           ListEmptyComponent={<ListEmpty />}
@@ -81,59 +79,20 @@ export default function TracksScreen({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
+  container: { flex: 1, backgroundColor: Colors.background },
   header: {
     paddingTop: 60,
     paddingHorizontal: 24,
     paddingBottom: 8,
     gap: 4,
   },
-  eyebrow: {
-    color: Colors.gold,
-    fontSize: 10,
-    letterSpacing: 4,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  title: {
-    color: Colors.textPrimary,
-    fontSize: 32,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    color: Colors.textMuted,
-    fontSize: 13,
-    marginBottom: 20,
-  },
-  rule: {
-    height: 1,
-    backgroundColor: Colors.border,
-    marginBottom: 16,
-  },
-  listContent: {
-    paddingBottom: 110,
-  },
-  empty: {
-    alignItems: 'center',
-    paddingTop: 80,
-    gap: 8,
-  },
-  emptyGlyph: {
-    color: Colors.textMuted,
-    fontSize: 40,
-    marginBottom: 8,
-  },
-  emptyTitle: {
-    color: Colors.textPrimary,
-    fontSize: 17,
-    fontWeight: '700',
-  },
-  emptySub: {
-    color: Colors.textMuted,
-    fontSize: 13,
-  },
+  eyebrow: { color: Colors.gold, fontSize: 10, letterSpacing: 4, fontWeight: '700', marginBottom: 4 },
+  title: { color: Colors.textPrimary, fontSize: 32, fontWeight: '800', letterSpacing: -0.5 },
+  subtitle: { color: Colors.textMuted, fontSize: 13, marginBottom: 20 },
+  rule: { height: 1, backgroundColor: Colors.border, marginBottom: 16 },
+  listContent: { paddingBottom: 110 },
+  empty: { alignItems: 'center', paddingTop: 80, gap: 8 },
+  emptyGlyph: { color: Colors.textMuted, fontSize: 40, marginBottom: 8 },
+  emptyTitle: { color: Colors.textPrimary, fontSize: 17, fontWeight: '700' },
+  emptySub: { color: Colors.textMuted, fontSize: 13 },
 });
