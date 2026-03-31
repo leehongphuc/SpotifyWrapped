@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useFirebaseStats, FirebaseStats, CurrentPlaying } from './useFirebaseStats';
 import {
   getMe,
@@ -35,8 +35,8 @@ interface SpotifyData {
 
 export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
   const [user, setUser] = useState<SpotifyUser | null>(null);
-  const [topTracks, setTopTracks] = useState<SpotifyTrack[]>([]);
-  const [topArtists, setTopArtists] = useState<SpotifyArtist[]>([]);
+  const [rawTopTracks, setRawTopTracks] = useState<SpotifyTrack[]>([]);
+  const [rawTopArtists, setRawTopArtists] = useState<SpotifyArtist[]>([]);
   const [playlists, setPlaylists] = useState<SpotifyPlaylist[]>([]);
   const [recentlyPlayed, setRecentlyPlayed] = useState<RecentlyPlayed[]>([]);
   const [genres, setGenres] = useState<{ genre: string; count: number }[]>([]);
@@ -45,7 +45,24 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { stats: firebaseStats, currentPlaying, trackPlays, attachPlaycount, attachArtistStats } = useFirebaseStats(user?.id);
+  const { 
+    stats: firebaseStats, 
+    currentPlaying, 
+    trackPlays, 
+    artistPlays,
+    attachPlaycount, 
+    attachArtistStats 
+  } = useFirebaseStats(user?.id);
+
+  // ── Enriched Data ─────────────────────────────────────────────
+  // Sử dụng useMemo để tự động cập nhật khi trackPlays hoặc raw data thay đổi
+  const topTracks = useMemo(() => {
+    return attachPlaycount(rawTopTracks);
+  }, [rawTopTracks, trackPlays, attachPlaycount]);
+
+  const topArtists = useMemo(() => {
+    return attachArtistStats(rawTopArtists);
+  }, [rawTopArtists, trackPlays, artistPlays, attachArtistStats]);
 
   const fetchData = useCallback(async (isRefresh = false) => {
     if (!isAuthenticated) return;
@@ -63,18 +80,9 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
         getRecentlyPlayed(50),
       ]);
 
-      let enrichedTracks = tracks;
-      let enrichedArtists = artists;
-      try {
-        enrichedTracks = attachPlaycount(tracks);
-        enrichedArtists = attachArtistStats(artists);
-      } catch (e) {
-        console.log('Lỗi gắp Firebase Playcount:', e);
-      }
-
       setUser(userData);
-      setTopTracks(enrichedTracks);
-      setTopArtists(enrichedArtists);
+      setRawTopTracks(tracks);
+      setRawTopArtists(artists);
       setPlaylists(playlistData);
       setRecentlyPlayed(recent);
       setGenres(extractGenres(artists));

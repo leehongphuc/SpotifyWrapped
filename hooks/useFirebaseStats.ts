@@ -98,7 +98,7 @@ export function useFirebaseStats(userId: string | undefined) {
 
   // Hàm helper gắp Playcount Firebase và đếm số Bài Hát đã lưu của Nghệ sĩ
   const attachArtistStats = (artists: any[]): any[] => {
-    if (Object.keys(artistPlays).length === 0) return artists;
+    if (Object.keys(artistPlays).length === 0 && Object.keys(trackPlays).length === 0) return artists;
     return artists.map(a => {
       // Đếm số bài hát có tên nghệ sĩ này lọt vào firebase tracks
       let tracksCount = 0;
@@ -120,6 +120,7 @@ export function useFirebaseStats(userId: string | undefined) {
     stats,
     currentPlaying,
     trackPlays,
+    artistPlays,
     attachPlaycount,
     attachArtistStats
   };

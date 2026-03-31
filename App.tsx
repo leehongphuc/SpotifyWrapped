@@ -7,6 +7,7 @@ import {
   Platform,
   StatusBar,
 } from 'react-native';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context'; // 👈 thêm
 
 import { useSpotifyAuth } from './hooks/useSpotifyAuth';
 import { useSpotifyData } from './hooks/useSpotifyData';
@@ -31,10 +32,11 @@ const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: 'profile', icon: '◯', label: 'Profile' },
 ];
 
-export default function App() {
-  const [activeTab, setActiveTab] = useState<Tab>('home');
 
-  // ── Track detail navigation state ──────────────────────────────
+// 👇 Tách component riêng để dùng được useSafeAreaInsets
+function AppContent() {
+  const insets = useSafeAreaInsets(); // 👈 lấy safe area
+  const [activeTab, setActiveTab] = useState<Tab>('home');
   const [selectedTrack, setSelectedTrack] = useState<SpotifyTrack | null>(null);
   const [selectedTrackRank, setSelectedTrackRank] = useState<number>(1);
 
@@ -48,20 +50,17 @@ export default function App() {
     timeRange, setTimeRange,
     loading: dataLoading, refreshing, refresh,
     firebaseStats, currentPlaying,
-    trackPlays,  // <-- needed for playcount on detail screen
+    trackPlays,
+    error: dataError,
   } = useSpotifyData(isAuthenticated);
 
-  // ── Open track detail ─────────────────────────────────────────
   const openTrackDetail = (track: SpotifyTrack, rank: number) => {
     setSelectedTrack(track);
     setSelectedTrackRank(rank);
   };
 
-  const closeTrackDetail = () => {
-    setSelectedTrack(null);
-  };
+  const closeTrackDetail = () => setSelectedTrack(null);
 
-  // ── Splash ────────────────────────────────────────────────────
   if (authLoading) {
     return (
       <View style={styles.splashContainer}>
@@ -73,90 +72,86 @@ export default function App() {
     );
   }
 
-  // ── Not logged in ─────────────────────────────────────────────
   if (!isAuthenticated) {
     return <LoginScreen onLogin={login} loading={authLoading} error={authError} />;
   }
 
-  // ── Screen renderer ───────────────────────────────────────────
   const renderScreen = () => {
     switch (activeTab) {
       case 'home':
         return (
           <HomeScreen
-            user={user}
-            topTracks={topTracks}
-            topArtists={topArtists}
-            firebaseStats={firebaseStats}
-            currentPlaying={currentPlaying}
-            loading={dataLoading}
-            refreshing={refreshing}
-            onRefresh={refresh}
-            onTrackPress={openTrackDetail}
+            user={user} topTracks={topTracks} topArtists={topArtists}
+            firebaseStats={firebaseStats} currentPlaying={currentPlaying}
+            loading={dataLoading} refreshing={refreshing}
+            onRefresh={refresh} onTrackPress={openTrackDetail}
           />
         );
       case 'tracks':
         return (
           <TracksScreen
-            tracks={topTracks}
-            timeRange={timeRange}
-            setTimeRange={setTimeRange}
-            loading={dataLoading}
-            refreshing={refreshing}
-            onRefresh={refresh}
-            onTrackPress={openTrackDetail}
+            tracks={topTracks} timeRange={timeRange} setTimeRange={setTimeRange}
+            loading={dataLoading} refreshing={refreshing}
+            onRefresh={refresh} onTrackPress={openTrackDetail}
           />
         );
       case 'artists':
         return (
           <ArtistsScreen
-            artists={topArtists}
-            timeRange={timeRange}
-            setTimeRange={setTimeRange}
-            loading={dataLoading}
-            refreshing={refreshing}
-            onRefresh={refresh}
+            artists={topArtists} timeRange={timeRange} setTimeRange={setTimeRange}
+            loading={dataLoading} refreshing={refreshing} onRefresh={refresh}
           />
         );
       case 'stats':
         return (
           <StatsScreen
-            tracks={topTracks}
-            artists={topArtists}
-            genres={genres}
-            timeRange={timeRange}
-            setTimeRange={setTimeRange}
-            loading={dataLoading}
-            refreshing={refreshing}
-            onRefresh={refresh}
+            tracks={topTracks} artists={topArtists} genres={genres}
+            timeRange={timeRange} setTimeRange={setTimeRange}
+            loading={dataLoading} refreshing={refreshing} onRefresh={refresh}
           />
         );
       case 'profile':
-        return (
-          <ProfileScreen
-            user={user}
-            playlists={playlists}
-            onLogout={logout}
-          />
-        );
+        return <ProfileScreen user={user} playlists={playlists} onLogout={logout} />;
     }
   };
 
-  // ── Get playcount for selected track from Firebase ────────────
   const selectedTrackPlaycount =
     selectedTrack && trackPlays
       ? (trackPlays[selectedTrack.id]?.play_count || selectedTrack.playcount || 0)
       : 0;
 
+  // 👇 Tính tab bar height động theo insets
+  const TAB_CONTENT_HEIGHT = 56; // paddingTop(12) + icon + label + paddingBottom(12)
+  const tabBarHeight = TAB_CONTENT_HEIGHT + insets.bottom;
+
   return (
     <View style={styles.appContainer}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.background} />
 
-      {/* Main content */}
-      <View style={styles.content}>{renderScreen()}</View>
+      {/* DEBUG OVERLAY — xoá sau khi fix xong */}
+      {__DEV__ && (
+        <View style={{
+          position: 'absolute', top: 60, left: 10, right: 10,
+          backgroundColor: 'rgba(0,0,0,0.85)', padding: 10, zIndex: 999, borderRadius: 8
+        }}>
+          <Text style={{ color: '#1DB954', fontSize: 11, fontFamily: 'monospace' }}>
+            auth: {isAuthenticated ? '✅' : '❌'}{'\n'}
+            user: {user?.display_name || 'null'}{'\n'}
+            tracks: {topTracks.length}{'\n'}
+            artists: {topArtists.length}{'\n'}
+            loading: {dataLoading ? '⏳' : '✅'}{'\n'}
+            error: {dataError || 'none'}
+          </Text>
+        </View>
+      )}
 
-      {/* Bottom tab bar */}
-      <View style={styles.tabBarWrapper}>
+      {/* Content cần biết tab bar cao bao nhiêu để không bị che */}
+      <View style={[styles.content, { paddingBottom: tabBarHeight }]}>
+        {renderScreen()}
+      </View>
+
+      {/* Tab bar */}
+      <View style={[styles.tabBarWrapper, { paddingBottom: insets.bottom }]}>
         <View style={styles.tabBar}>
           {TABS.map((tab) => {
             const isActive = activeTab === tab.key;
@@ -180,7 +175,6 @@ export default function App() {
         </View>
       </View>
 
-      {/* Track detail overlay — rendered on top of everything */}
       {selectedTrack && (
         <TrackDetailScreen
           track={selectedTrack}
@@ -193,6 +187,15 @@ export default function App() {
   );
 }
 
+// 👇 Wrap toàn app trong SafeAreaProvider
+export default function App() {
+  return (
+    <SafeAreaProvider>
+      <AppContent />
+    </SafeAreaProvider>
+  );
+}
+
 const styles = StyleSheet.create({
   splashContainer: {
     flex: 1,
@@ -202,38 +205,31 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   splashLogo: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    borderWidth: 1,
-    borderColor: Colors.gold,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 64, height: 64, borderRadius: 32,
+    borderWidth: 1, borderColor: Colors.gold,
+    alignItems: 'center', justifyContent: 'center',
   },
   splashEmoji: { color: Colors.gold, fontSize: 28 },
   splashTitle: {
     color: Colors.textPrimary,
-    fontSize: 22,
-    fontWeight: '800',
-    letterSpacing: 8,
+    fontSize: 22, fontWeight: '800', letterSpacing: 8,
   },
   appContainer: { flex: 1, backgroundColor: Colors.background },
   content: { flex: 1 },
 
   tabBarWrapper: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    bottom: 0, left: 0, right: 0,
     backgroundColor: Colors.surface,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
+    // ❌ bỏ paddingBottom cố định ở đây — chuyển sang inline style
   },
   tabBar: {
     flexDirection: 'row',
-    paddingBottom: Platform.OS === 'ios' ? 28 : 12,
     paddingTop: 12,
     paddingHorizontal: 8,
+    paddingBottom: 12, // padding nội dung tab, KHÔNG tính nav bar
     gap: 4,
   },
   tabItem: {
@@ -246,8 +242,7 @@ const styles = StyleSheet.create({
   tabActiveIndicator: {
     position: 'absolute',
     top: -12,
-    width: 24,
-    height: 2,
+    width: 24, height: 2,
     backgroundColor: Colors.gold,
     borderRadius: 1,
   },
@@ -255,10 +250,8 @@ const styles = StyleSheet.create({
   tabIconActive: { color: Colors.gold },
   tabLabel: {
     color: Colors.textMuted,
-    fontSize: 9,
-    fontWeight: '600',
-    textAlign: 'center',
-    letterSpacing: 0.5,
+    fontSize: 9, fontWeight: '600',
+    textAlign: 'center', letterSpacing: 0.5,
   },
   tabLabelActive: { color: Colors.gold },
 });

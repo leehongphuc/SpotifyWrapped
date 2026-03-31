@@ -8,35 +8,24 @@ import { db } from '../services/firebaseConfig';
 
 WebBrowser.maybeCompleteAuthSession();
 
-// ─── Spotify OAuth2 Config ─────────────────────────────────────
-// !! Thay YOUR_SPOTIFY_CLIENT_ID bằng Client ID của bạn !!
-const CLIENT_ID = 'd80501e40c4d45adb2b11a05f0f36102';
-
-const SCOPES = [
-  'user-read-private',
-  'user-read-email',
-  'user-top-read',
-  'user-read-recently-played',
-  'playlist-read-private',
-  'user-read-currently-playing',
-  'user-read-playback-state',
-].join(' ');
-
-const discovery = {
-  authorizationEndpoint: 'https://accounts.spotify.com/authorize',
-  tokenEndpoint: 'https://accounts.spotify.com/api/token',
-};
-
-// ─── Storage Keys ─────────────────────────────────────────────
-const TOKEN_KEY = 'spotify_access_token';
-const REFRESH_KEY = 'spotify_refresh_token';
-const EXPIRY_KEY = 'spotify_token_expiry';
+import { CLIENT_ID, SCOPES, discovery, TOKEN_KEY, REFRESH_KEY, EXPIRY_KEY } from '../constants/spotify';
 
 // ─── Hook ─────────────────────────────────────────────────────
 export function useSpotifyAuth() {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Lắng nghe sự kiện token bị xoá từ interceptor (như khi refresh fail)
+    const interval = setInterval(async () => {
+      const storedToken = await AsyncStorage.getItem(TOKEN_KEY);
+      if (!storedToken && token) {
+        setToken(null);
+      }
+    }, 10000); // Check mỗi 10s
+    return () => clearInterval(interval);
+  }, [token]);
 
   // Redirect URI (tự động theo scheme trong app.json)
   const redirectUri = AuthSession.makeRedirectUri({

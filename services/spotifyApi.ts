@@ -1,6 +1,8 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { CLIENT_ID, TOKEN_KEY, REFRESH_KEY, EXPIRY_KEY } from '../constants/spotify';
+
 const BASE_URL = 'https://api.spotify.com/v1';
 
 // Tạo axios instance
@@ -10,12 +12,69 @@ const spotifyAxios = axios.create({
 
 // Interceptor — gắn token vào mọi request
 spotifyAxios.interceptors.request.use(async (config) => {
-  const token = await AsyncStorage.getItem('spotify_access_token');
+  const token = await AsyncStorage.getItem(TOKEN_KEY);
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
+
+// ─── Response Interceptor — tự động refresh khi 401 ──────────────
+spotifyAxios.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        const refreshToken = await AsyncStorage.getItem(REFRESH_KEY);
+
+        if (!refreshToken) throw new Error('No refresh token');
+
+        const body = new URLSearchParams({
+          grant_type: 'refresh_token',
+          refresh_token: refreshToken,
+          client_id: CLIENT_ID,
+        });
+
+        const res = await fetch('https://accounts.spotify.com/api/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: body.toString(),
+        });
+
+        const data = await res.json();
+
+        if (!data.access_token) throw new Error('Refresh failed');
+
+        // Lưu token mới
+        const expiryTime = Date.now() + data.expires_in * 1000;
+        await AsyncStorage.setItem(TOKEN_KEY, data.access_token);
+        await AsyncStorage.setItem(EXPIRY_KEY, expiryTime.toString());
+        if (data.refresh_token) {
+          await AsyncStorage.setItem(REFRESH_KEY, data.refresh_token);
+        }
+
+        // Retry request gốc với token mới
+        originalRequest.headers.Authorization = `Bearer ${data.access_token}`;
+        return spotifyAxios(originalRequest);
+
+      } catch (refreshError) {
+        // Refresh thất bại → xoá token → bắt user login lại
+        await AsyncStorage.multiRemove([
+          TOKEN_KEY,
+          REFRESH_KEY,
+          EXPIRY_KEY,
+        ]);
+        console.error('Token refresh failed, logging out:', refreshError);
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
 
 // ─── Types ───────────────────────────────────────────────────────
 export interface SpotifyUser {
