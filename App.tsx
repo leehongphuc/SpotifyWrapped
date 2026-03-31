@@ -128,30 +128,7 @@ function AppContent() {
     <View style={styles.appContainer}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.background} />
 
-      {/* DEBUG OVERLAY — xoá sau khi fix xong */}
-      <View style={{
-        position: 'absolute', top: 60, left: 10, right: 10,
-        backgroundColor: 'rgba(0,0,0,0.9)', padding: 12, zIndex: 999, borderRadius: 8,
-        borderWidth: 1, borderColor: '#1DB954'
-      }}>
-        <Text style={{ color: '#1DB954', fontSize: 11, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
-          auth: {isAuthenticated ? '✅' : '❌'} {authError ? `(AE: ${authError.slice(0, 15)})` : ''}{'\n'}
-          user: {user?.display_name || 'null'} ({user?.id || 'no-id'}){'\n'}
-          tracks: {topTracks?.length || 0} | artists: {topArtists?.length || 0}{'\n'}
-          loading: {dataLoading ? '⏳' : '✅'} | error: {dataError || 'none'}
-        </Text>
-        
-        {/* Nút bấm cứu cánh khi bị kẹt */}
-        <TouchableOpacity 
-          onPress={logout}
-          style={{ 
-            marginTop: 10, backgroundColor: '#1DB954', padding: 6, 
-            borderRadius: 4, alignItems: 'center' 
-          }}
-        >
-          <Text style={{ color: 'white', fontSize: 10, fontWeight: '700' }}>FORCE LOGOUT & CLEAN STORAGE</Text>
-        </TouchableOpacity>
-      </View>
+
 
       {/* Content cần biết tab bar cao bao nhiêu để không bị che */}
       <View style={[styles.content, { paddingBottom: tabBarHeight }]}>

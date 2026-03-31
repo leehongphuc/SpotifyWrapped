@@ -23,6 +23,47 @@ interface HomeScreenProps {
   onTrackPress?: (track: SpotifyTrack, rank: number) => void;
 }
 
+function AnimatedWave() {
+  const BASE_HEIGHTS = [8, 14, 10, 18, 12, 16, 9, 13];
+  const anims = useRef(BASE_HEIGHTS.map(h => new Animated.Value(h))).current;
+
+  useEffect(() => {
+    const animations = anims.map((anim, i) => {
+      const minH = BASE_HEIGHTS[i] * 0.2;
+      const maxH = BASE_HEIGHTS[i];
+      return Animated.loop(
+        Animated.sequence([
+          Animated.timing(anim, {
+            toValue: minH,
+            duration: 250 + i * 50,
+            delay: i * 70,
+            useNativeDriver: false, // height không dùng native driver được
+          }),
+          Animated.timing(anim, {
+            toValue: maxH,
+            duration: 250 + i * 50,
+            useNativeDriver: false,
+          }),
+        ])
+      );
+    });
+
+    animations.forEach(a => a.start());
+    return () => animations.forEach(a => a.stop());
+  }, []);
+
+  return (
+    <View style={styles.waveRow}>
+      {anims.map((anim, i) => (
+        <Animated.View
+          key={i}
+          style={[styles.waveBar, { height: anim as any }]}
+        />
+      ))}
+    </View>
+  );
+}
+
 export default function HomeScreen({
   user, topTracks, topArtists,
   firebaseStats, currentPlaying,
@@ -90,11 +131,7 @@ export default function HomeScreen({
               <Text style={styles.nowPlayingArtist} numberOfLines={1}>
                 {currentPlaying.artist_name}
               </Text>
-              <View style={styles.waveRow}>
-                {[8, 14, 10, 18, 12, 16, 9, 13].map((h, i) => (
-                  <View key={i} style={[styles.waveBar, { height: h }]} />
-                ))}
-              </View>
+              <AnimatedWave />
             </View>
           </View>
         ) : (

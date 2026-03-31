@@ -36,33 +36,7 @@ interface TrackDetailScreenProps {
     playcount?: number;
 }
 
-// ── Small bar chart for audio feature 0–1 ───────────────────────
-function FeatureBar({ value, color = Colors.gold }: { value: number; color?: string }) {
-    const anim = useRef(new Animated.Value(0)).current;
-    useEffect(() => {
-        Animated.timing(anim, { toValue: value, duration: 700, delay: 300, useNativeDriver: false }).start();
-    }, [value]);
-    const w = anim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
-    return (
-        <View style={barStyles.track}>
-            <Animated.View style={[barStyles.fill, { width: w, backgroundColor: color }]} />
-        </View>
-    );
-}
 
-const barStyles = StyleSheet.create({
-    track: {
-        flex: 1,
-        height: 3,
-        backgroundColor: Colors.border,
-        borderRadius: 2,
-        overflow: 'hidden',
-    },
-    fill: {
-        height: '100%',
-        borderRadius: 2,
-    },
-});
 
 // ── Popularity arc ───────────────────────────────────────────────
 function PopularityRing({ score }: { score: number }) {
@@ -106,8 +80,7 @@ const ringStyles = StyleSheet.create({
 // ── Main Screen ──────────────────────────────────────────────────
 export default function TrackDetailScreen({ track, rank, onClose, playcount = 0 }: TrackDetailScreenProps) {
     const [detail, setDetail] = useState<TrackDetail | null>(null);
-    const [features, setFeatures] = useState<AudioFeatures | null>(null);
-    const [loadingFeatures, setLoadingFeatures] = useState(true);
+    const [loadingDetail, setLoadingDetail] = useState(true);
 
     const slideAnim = useRef(new Animated.Value(height)).current;
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -127,19 +100,15 @@ export default function TrackDetailScreen({ track, rank, onClose, playcount = 0 
         ]).start(() => onClose());
     };
 
-    // Fetch detail + audio features
+    // Fetch detail
     useEffect(() => {
         let cancelled = false;
         (async () => {
-            setLoadingFeatures(true);
-            const [d, f] = await Promise.all([
-                getTrackDetail(track.id),
-                getAudioFeatures(track.id),
-            ]);
+            setLoadingDetail(true);
+            const d = await getTrackDetail(track.id);
             if (!cancelled) {
                 setDetail(d);
-                setFeatures(f);
-                setLoadingFeatures(false);
+                setLoadingDetail(false);
             }
         })();
         return () => { cancelled = true; };
@@ -157,12 +126,7 @@ export default function TrackDetailScreen({ track, rank, onClose, playcount = 0 
                 rank === 3 ? Colors.bronze :
                     Colors.textMuted;
 
-    const AUDIO_FEATURES = features ? [
-        { label: 'Energy', value: features.energy, color: '#E8C870' },
-        { label: 'Danceability', value: features.danceability, color: '#8AAFA8' },
-        { label: 'Valence', value: features.valence, color: '#7A6E8A' },
-        { label: 'Acousticness', value: features.acousticness, color: '#A07850' },
-    ] : [];
+
 
     return (
         <>
@@ -233,14 +197,6 @@ export default function TrackDetailScreen({ track, rank, onClose, playcount = 0 
                             <Text style={styles.statValue}>{formatDurationMs(durationMs)}</Text>
                             <Text style={styles.statLabel}>DURATION</Text>
                         </View>
-
-                        {/* BPM */}
-                        {features && (
-                            <View style={styles.statBlock}>
-                                <Text style={styles.statValue}>{Math.round(features.tempo)}</Text>
-                                <Text style={styles.statLabel}>BPM</Text>
-                            </View>
-                        )}
                     </View>
 
                     {/* ── Listening stats ── */}
@@ -264,44 +220,7 @@ export default function TrackDetailScreen({ track, rank, onClose, playcount = 0 
                         </View>
                     </View>
 
-                    {/* ── Audio features ── */}
-                    {loadingFeatures ? (
-                        <View style={styles.loadingBox}>
-                            <ActivityIndicator color={Colors.gold} size="small" />
-                            <Text style={styles.loadingText}>Đang tải phân tích âm thanh…</Text>
-                        </View>
-                    ) : features ? (
-                        <View style={styles.section}>
-                            <Text style={styles.sectionLabel}>AUDIO ANALYSIS</Text>
 
-                            {/* BPM + Key highlight cards */}
-                            <View style={styles.audioHighlightRow}>
-                                <View style={styles.audioHighlightCard}>
-                                    <Text style={styles.audioHighlightValue}>{Math.round(features.tempo)}</Text>
-                                    <Text style={styles.audioHighlightLabel}>BPM · Tempo</Text>
-                                </View>
-                                <View style={styles.audioHighlightCard}>
-                                    <Text style={styles.audioHighlightValue}>{formatKey(features.key, features.mode)}</Text>
-                                    <Text style={styles.audioHighlightLabel}>Key</Text>
-                                </View>
-                                <View style={styles.audioHighlightCard}>
-                                    <Text style={styles.audioHighlightValue}>{features.time_signature}/4</Text>
-                                    <Text style={styles.audioHighlightLabel}>Time Sig</Text>
-                                </View>
-                            </View>
-
-                            {/* Feature bars */}
-                            <View style={styles.featureList}>
-                                {AUDIO_FEATURES.map(f => (
-                                    <View key={f.label} style={styles.featureRow}>
-                                        <Text style={styles.featureLabel}>{f.label}</Text>
-                                        <FeatureBar value={f.value} color={f.color} />
-                                        <Text style={styles.featureValue}>{Math.round(f.value * 100)}</Text>
-                                    </View>
-                                ))}
-                            </View>
-                        </View>
-                    ) : null}
 
                     {/* ── Album info ── */}
                     {detail?.album && (
@@ -540,67 +459,7 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
 
-    /* Audio features */
-    loadingBox: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-        paddingHorizontal: 24,
-        paddingTop: 24,
-    },
-    loadingText: {
-        color: Colors.textMuted,
-        fontSize: 13,
-    },
-    audioHighlightRow: {
-        flexDirection: 'row',
-        gap: 10,
-        marginBottom: 20,
-    },
-    audioHighlightCard: {
-        flex: 1,
-        backgroundColor: Colors.surface,
-        borderRadius: 4,
-        borderWidth: 1,
-        borderColor: Colors.border,
-        padding: 14,
-        alignItems: 'center',
-        gap: 5,
-    },
-    audioHighlightValue: {
-        color: Colors.textPrimary,
-        fontSize: 14,
-        fontWeight: '800',
-        textAlign: 'center',
-    },
-    audioHighlightLabel: {
-        color: Colors.textMuted,
-        fontSize: 9,
-        letterSpacing: 1,
-        fontWeight: '600',
-        textAlign: 'center',
-    },
-    featureList: {
-        gap: 14,
-    },
-    featureRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-    },
-    featureLabel: {
-        color: Colors.textSecondary,
-        fontSize: 12,
-        width: 88,
-        fontWeight: '500',
-    },
-    featureValue: {
-        color: Colors.textMuted,
-        fontSize: 11,
-        fontWeight: '700',
-        width: 28,
-        textAlign: 'right',
-    },
+
 
     /* Album row */
     albumRow: {
