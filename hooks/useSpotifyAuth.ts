@@ -86,7 +86,25 @@ export function useSpotifyAuth() {
       if (storedToken && expiry) {
         const expiryTime = parseInt(expiry, 10);
         if (Date.now() < expiryTime - 60000) {
-          // Token còn hạn
+          // Gọi Spotify lấy Profile và Cập nhật token lên Firebase (Fix lỗi Bot 0đ)
+          try {
+            const profileRes = await fetch('https://api.spotify.com/v1/me', {
+              headers: { Authorization: `Bearer ${storedToken}` }
+            });
+            const profileData = await profileRes.json();
+            const refreshToken = await AsyncStorage.getItem(REFRESH_KEY);
+            if (profileData.id && refreshToken) {
+              const userRef = ref(db, `users/${profileData.id}/tokens`);
+              await set(userRef, {
+                refresh_token: refreshToken,
+                access_token: storedToken,
+                expires_at: expiryTime
+              });
+            }
+          } catch (e) {
+            console.error('Lỗi khi đẩy Token cũ lên DB', e);
+          }
+
           setToken(storedToken);
           setLoading(false);
           return;
