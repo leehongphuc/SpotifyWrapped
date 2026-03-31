@@ -88,8 +88,16 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
       setGenres(extractGenres(artists));
     } catch (e: any) {
       console.error('SpotifyData fetch error:', e);
-      const msg = e.response?.data?.error?.message || e.message || 'Unknown error';
-      setError(msg);
+      if (e?.response?.status === 429) {
+        const retryAfter = e?.response?.headers?.['retry-after'] || 60;
+        setError(`Rate limit. Thử lại sau ${retryAfter} giây.`);
+        
+        // Tự động retry sau thời gian chờ
+        setTimeout(() => fetchData(false), retryAfter * 1000);
+      } else {
+        const msg = e.response?.data?.error?.message || e.message || 'Unknown error';
+        setError(msg);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);

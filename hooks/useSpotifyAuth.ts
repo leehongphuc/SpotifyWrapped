@@ -75,14 +75,43 @@ export function useSpotifyAuth() {
       if (storedToken && expiry) {
         const expiryTime = parseInt(expiry, 10);
         if (Date.now() < expiryTime - 60000) {
-          // Gọi Spotify lấy Profile và Cập nhật token lên Firebase (Fix lỗi Bot 0đ)
-          try {
-            const profileRes = await fetch('https://api.spotify.com/v1/me', {
-              headers: { Authorization: `Bearer ${storedToken}` }
-            });
-            const profileData = await profileRes.json();
+
+          // Thử gọi /me với retry nếu bị 429
+          let profileData = null;
+          for (let attempt = 0; attempt < 3; attempt++) {
+            try {
+              const profileRes = await fetch('https://api.spotify.com/v1/me', {
+                headers: { Authorization: `Bearer ${storedToken}` }
+              });
+
+              if (profileRes.status === 429) {
+                const retryAfter = profileRes.headers.get('retry-after') || '10';
+                console.log(`Rate limited, waiting ${retryAfter}s...`);
+                await new Promise(r => setTimeout(r, parseInt(retryAfter) * 1000));
+                continue; // thử lại
+              }
+
+              if (!profileRes.ok) {
+                // Token invalid (401, 403) → xoá, bắt login lại
+                await AsyncStorage.multiRemove([TOKEN_KEY, REFRESH_KEY, EXPIRY_KEY]);
+                setLoading(false);
+                return;
+              }
+
+              profileData = await profileRes.json();
+              break; // thành công → thoát loop
+
+            } catch (e) {
+              console.error(`Profile fetch attempt ${attempt + 1} failed:`, e);
+              if (attempt === 2) throw e; // hết retry → throw
+              await new Promise(r => setTimeout(r, 2000));
+            }
+          }
+
+          // Cập nhật Firebase nếu lấy được profile
+          if (profileData?.id) {
             const refreshToken = await AsyncStorage.getItem(REFRESH_KEY);
-            if (profileData.id && refreshToken) {
+            if (refreshToken) {
               const userRef = ref(db, `users/${profileData.id}/tokens`);
               await set(userRef, {
                 refresh_token: refreshToken,
@@ -90,13 +119,12 @@ export function useSpotifyAuth() {
                 expires_at: expiryTime
               });
             }
-          } catch (e) {
-            console.error('Lỗi khi đẩy Token cũ lên DB', e);
           }
 
           setToken(storedToken);
           setLoading(false);
           return;
+
         } else {
           // Token hết hạn — thử refresh
           await tryRefreshToken();
