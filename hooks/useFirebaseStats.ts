@@ -24,8 +24,8 @@ export function useFirebaseStats(userId: string | undefined) {
   const [currentPlaying, setCurrentPlaying] = useState<CurrentPlaying | null>(null);
   // Dictionary map `trackId` -> Firebase Track object
   const [trackPlays, setTrackPlays] = useState<Record<string, any>>({});
-  // Dictionary map `artistId` -> play count
-  const [artistPlays, setArtistPlays] = useState<Record<string, number>>({});
+  // Dictionary map `artistId` -> artist object {name, play_count}
+  const [artistPlays, setArtistPlays] = useState<Record<string, any>>({});
 
   useEffect(() => {
     if (!userId) {
@@ -66,16 +66,11 @@ export function useFirebaseStats(userId: string | undefined) {
       }
     });
 
-    // Lắng nghe lượt nghe nghệ sĩ
     const artistsRef = ref(db, `users/${userId}/artists`);
     const unsubArtists = onValue(artistsRef, (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.val();
-        const map: Record<string, number> = {};
-        for (const artistId in data) {
-          map[artistId] = data[artistId].play_count || 0;
-        }
-        setArtistPlays(map);
+        setArtistPlays(data);
       }
     });
 

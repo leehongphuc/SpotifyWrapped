@@ -2,6 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../constants/colors';
+import { TimeRange } from '../services/spotifyApi';
 
 // ── StatCard ─────────────────────────────────────────────────────
 
@@ -72,14 +73,16 @@ const statStyles = StyleSheet.create({
 // ── TimeFilter ───────────────────────────────────────────────────
 
 const TIME_OPTIONS = [
+  { key: '1_day' as const, label: '1 Day' },
+  { key: '1_week' as const, label: '1 Week' },
   { key: 'short_term' as const, label: '4 Weeks' },
   { key: 'medium_term' as const, label: '6 Months' },
   { key: 'long_term' as const, label: 'All Time' },
 ];
 
 interface TimeFilterProps {
-  current: 'short_term' | 'medium_term' | 'long_term';
-  onChange: (v: 'short_term' | 'medium_term' | 'long_term') => void;
+  current: TimeRange;
+  onChange: (v: TimeRange) => void;
 }
 
 export function TimeFilter({ current, onChange }: TimeFilterProps) {

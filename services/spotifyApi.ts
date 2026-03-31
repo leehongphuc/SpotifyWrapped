@@ -159,7 +159,7 @@ export interface RecentlyPlayed {
   played_at: string;
 }
 
-export type TimeRange = 'short_term' | 'medium_term' | 'long_term';
+export type TimeRange = '1_day' | '1_week' | 'short_term' | 'medium_term' | 'long_term';
 
 // ─── API Functions ────────────────────────────────────────────────
 

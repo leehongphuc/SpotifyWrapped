@@ -27,14 +27,14 @@ export function useSpotifyQueries(isAuthenticated: boolean, timeRange: TimeRange
 
   const tracksQuery = useQuery({
     queryKey: spotifyKeys.topTracks(timeRange),
-    queryFn: () => getTopTracks(timeRange, 50),
-    enabled: isAuthenticated,
+    queryFn: () => getTopTracks(timeRange as any, 50),
+    enabled: isAuthenticated && ['short_term', 'medium_term', 'long_term'].includes(timeRange),
   });
 
   const artistsQuery = useQuery({
     queryKey: spotifyKeys.topArtists(timeRange),
-    queryFn: () => getTopArtists(timeRange, 50),
-    enabled: isAuthenticated,
+    queryFn: () => getTopArtists(timeRange as any, 50),
+    enabled: isAuthenticated && ['short_term', 'medium_term', 'long_term'].includes(timeRange),
   });
 
   const playlistsQuery = useQuery({

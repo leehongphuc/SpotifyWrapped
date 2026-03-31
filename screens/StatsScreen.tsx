@@ -49,6 +49,8 @@ export default function StatsScreen({
   const topGenre = genres[0]?.genre || '—';
 
   const timeLabel = {
+    '1_day': '24 Hours',
+    '1_week': '7 Days',
     short_term: '4 Weeks',
     medium_term: '6 Months',
     long_term: 'All Time',

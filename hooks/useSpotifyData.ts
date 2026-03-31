@@ -57,14 +57,71 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
   } = useFirebaseStats(user?.id);
 
   // ── Enriched Data ─────────────────────────────────────────────
-  // Sử dụng useMemo để tự động cập nhật khi trackPlays hoặc raw data thay đổi
+  
+  // Logic lọc và sắp xếp Top Tracks từ Firebase
   const topTracks = useMemo(() => {
-    return attachPlaycount(rawTopTracks);
-  }, [rawTopTracks, trackPlays, attachPlaycount]);
+    const allTracks = Object.keys(trackPlays).map(id => {
+      const fbTrack = trackPlays[id];
+      // Tìm metadata từ Spotify nếu có (để lấy popularity, album details đầy đủ hơn)
+      const spotifyMeta = rawTopTracks.find(t => t.id === id);
+      
+      return {
+        ...spotifyMeta, // Metadata từ Spotify (nếu có)
+        id,
+        name: fbTrack.name || spotifyMeta?.name || 'Unknown Track',
+        artist: fbTrack.artist || (spotifyMeta?.artists ? spotifyMeta.artists[0].name : 'Unknown Artist'),
+        album: spotifyMeta?.album || { images: [{ url: fbTrack.album_image || '' }] },
+        album_image: fbTrack.album_image || spotifyMeta?.album?.images[0]?.url,
+        playcount: fbTrack.play_count || 0,
+        last_played: fbTrack.last_played || 0,
+        artists: spotifyMeta?.artists || [{ name: fbTrack.artist || 'Unknown Artist' }]
+      } as any;
+    });
 
+    let filtered = allTracks;
+    const now = Date.now();
+
+    if (timeRange === '1_day') {
+      filtered = allTracks.filter(t => t.last_played && now - t.last_played < 24 * 60 * 60 * 1000);
+    } else if (timeRange === '1_week') {
+      filtered = allTracks.filter(t => t.last_played && now - t.last_played < 7 * 24 * 60 * 60 * 1000);
+    }
+
+    return filtered.sort((a, b) => (b.playcount as number) - (a.playcount as number));
+  }, [trackPlays, rawTopTracks, timeRange]);
+
+  // Logic lọc và sắp xếp Top Artists từ Firebase
   const topArtists = useMemo(() => {
-    return attachArtistStats(rawTopArtists);
-  }, [rawTopArtists, trackPlays, artistPlays, attachArtistStats]);
+    const allArtists = Object.keys(artistPlays).map(id => {
+      const fbArtist = artistPlays[id];
+      const spotifyMeta = rawTopArtists.find(a => a.id === id);
+
+      // Tìm last_played của artist dựa trên bài hát gần nhất của họ
+      const artistTracks = Object.values(trackPlays).filter(t => t.artist?.includes(fbArtist.name || ''));
+      const lastPlayed = artistTracks.reduce((max, t) => Math.max(max, t.last_played || 0), 0);
+      
+      return {
+        ...spotifyMeta,
+        id,
+        name: fbArtist.name || spotifyMeta?.name || 'Unknown Artist',
+        playcount: fbArtist.play_count || 0,
+        last_played: lastPlayed,
+        images: spotifyMeta?.images || [],
+        genres: spotifyMeta?.genres || []
+      } as any;
+    });
+
+    let filtered = allArtists;
+    const now = Date.now();
+
+    if (timeRange === '1_day') {
+      filtered = allArtists.filter(a => a.last_played && now - a.last_played < 24 * 60 * 60 * 1000);
+    } else if (timeRange === '1_week') {
+      filtered = allArtists.filter(a => a.last_played && now - a.last_played < 7 * 24 * 60 * 60 * 1000);
+    }
+
+    return filtered.sort((a, b) => (b.playcount as number) - (a.playcount as number));
+  }, [artistPlays, trackPlays, rawTopArtists, timeRange]);
 
   const genres = useMemo(() => extractGenres(rawTopArtists), [rawTopArtists]);
 
