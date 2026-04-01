@@ -64,7 +64,7 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
     const now = Date.now();
     
     // Nếu là 1 ngày hoặc 1 tuần, ưu tiên dùng dữ liệu từ History cho chính xác
-    if ((timeRange === '1_day' || timeRange === '1_week') && history.length > 0) {
+    if ((timeRange === '1_day' || timeRange === '1_week') && (history.length > 0 || currentPlaying)) {
       const msLimit = timeRange === '1_day' ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
       
       const counts: Record<string, number> = {};
@@ -76,6 +76,11 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
           if (!metaMap[item.track_id]) metaMap[item.track_id] = item;
         }
       });
+
+      // MỚI: Cộng thêm bài đang phát hiện tại
+      if (currentPlaying && currentPlaying.track_id) {
+        counts[currentPlaying.track_id] = (counts[currentPlaying.track_id] || 0) + 1;
+      }
 
       return Object.keys(counts).map(id => {
         const spotifyMeta = rawTopTracks.find(t => t.id === id);
@@ -129,7 +134,7 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
   const topArtists = useMemo(() => {
     const now = Date.now();
 
-    if ((timeRange === '1_day' || timeRange === '1_week') && history.length > 0) {
+    if ((timeRange === '1_day' || timeRange === '1_week') && (history.length > 0 || currentPlaying)) {
       const msLimit = timeRange === '1_day' ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
       
       const counts: Record<string, { count: number, name: string }> = {};
@@ -147,6 +152,15 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
           }
         }
       });
+
+      // MỚI: Cộng thêm nghệ sĩ đang phát hiện tại
+      if (currentPlaying && currentPlaying.artist_name) {
+        const names = currentPlaying.artist_name.split(',').map((n: string) => n.trim());
+        names.forEach((aName: string) => {
+          if (!counts[aName]) counts[aName] = { count: 0, name: aName };
+          counts[aName].count++;
+        });
+      }
 
       return Object.values(counts).map(item => {
         // Tìm thông tin nghệ sĩ chính xác từ Firebase node artistPlays nếu có
