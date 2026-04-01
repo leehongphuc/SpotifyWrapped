@@ -56,7 +56,7 @@ export default function ArtistsScreen({
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
 
-      {loading ? (
+      {loading && artists.length === 0 ? (
         <>
           <ListHeader />
           {Array.from({ length: 8 }).map((_, i) => <TrackSkeleton key={i} />)}

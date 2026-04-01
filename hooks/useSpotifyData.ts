@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFirebaseStats, FirebaseStats, CurrentPlaying } from './useFirebaseStats';
 import {
   extractGenres,
@@ -31,6 +32,23 @@ interface SpotifyData {
 
 export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
   const [timeRange, setTimeRange] = useState<TimeRange>('short_term');
+  const [cachedTracks, setCachedTracks] = useState<Record<string, SpotifyTrack[]>>({});
+  const [cachedArtists, setCachedArtists] = useState<Record<string, SpotifyArtist[]>>({});
+
+  // 1. Load cache on mount
+  useEffect(() => {
+    const loadCache = async () => {
+      try {
+        const t = await AsyncStorage.getItem('cache_top_tracks');
+        const a = await AsyncStorage.getItem('cache_top_artists');
+        if (t) setCachedTracks(JSON.parse(t));
+        if (a) setCachedArtists(JSON.parse(a));
+      } catch (e) {
+        console.warn('Failed to load cache:', e);
+      }
+    };
+    loadCache();
+  }, []);
 
   // ── React Query Hooks ──
   const {
@@ -190,13 +208,38 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
     });
 
     return allArtists.sort((a, b) => (b.playcount as number) - (a.playcount as number));
-  }, [artistPlays, trackPlays, rawTopArtists, history, timeRange]);
+  }, [artistPlays, trackPlays, rawTopArtists, history, currentPlaying, timeRange]);
+
+  // 2. Save to cache when data updates
+  useEffect(() => {
+    const saveCache = async () => {
+      if (topTracks.length > 0) {
+        const newCache = { ...cachedTracks, [timeRange]: topTracks };
+        await AsyncStorage.setItem('cache_top_tracks', JSON.stringify(newCache));
+      }
+    };
+    saveCache();
+  }, [topTracks, timeRange]);
+
+  useEffect(() => {
+    const saveCache = async () => {
+      if (topArtists.length > 0) {
+        const newCache = { ...cachedArtists, [timeRange]: topArtists };
+        await AsyncStorage.setItem('cache_top_artists', JSON.stringify(newCache));
+      }
+    };
+    saveCache();
+  }, [topArtists, timeRange]);
 
   const genres = useMemo(() => extractGenres(rawTopArtists), [rawTopArtists]);
 
   const loading = profileQuery.isLoading || tracksQuery.isLoading || artistsQuery.isLoading;
   const refreshing = tracksQuery.isRefetching || artistsQuery.isRefetching;
   const error = (profileQuery.error || tracksQuery.error || artistsQuery.error) as any;
+
+  // Final exposed data: Use enriched data if available, otherwise fallback to cache
+  const finalTopTracks = topTracks.length > 0 ? topTracks : (cachedTracks[timeRange] || []);
+  const finalTopArtists = topArtists.length > 0 ? topArtists : (cachedArtists[timeRange] || []);
 
   const refresh = useCallback(() => {
     tracksQuery.refetch();
@@ -207,8 +250,8 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
 
   return {
     user,
-    topTracks,
-    topArtists,
+    topTracks: finalTopTracks,
+    topArtists: finalTopArtists,
     playlists,
     recentlyPlayed,
     genres,

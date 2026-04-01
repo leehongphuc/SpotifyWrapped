@@ -177,7 +177,7 @@ export default function HomeScreen({
       {/* Top Tracks */}
       <View style={styles.section}>
         <Text style={styles.sectionLabel}>TOP TRACKS · TUẦN NÀY</Text>
-        {loading
+        {loading && topTracks.length === 0
           ? Array.from({ length: 5 }).map((_, i) => <TrackSkeleton key={i} />)
           : topTracks.slice(0, 5).map((track, i) => (
             <TrackCard
@@ -193,7 +193,7 @@ export default function HomeScreen({
       {/* Top Artists */}
       <View style={styles.section}>
         <Text style={styles.sectionLabel}>TOP ARTISTS · TUẦN NÀY</Text>
-        {loading
+        {loading && topArtists.length === 0
           ? Array.from({ length: 3 }).map((_, i) => <TrackSkeleton key={i} />)
           : topArtists.slice(0, 3).map((artist, i) => (
             <ArtistCard key={artist.id} artist={artist} rank={i + 1} />

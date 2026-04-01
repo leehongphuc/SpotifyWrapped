@@ -51,7 +51,7 @@ export default function TracksScreen({
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-      {loading ? (
+      {loading && tracks.length === 0 ? (
         <>
           <ListHeader />
           {Array.from({ length: 8 }).map((_, i) => <TrackSkeleton key={i} />)}
