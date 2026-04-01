@@ -1,9 +1,3 @@
-// plugins/withSpotifyQueries.js
-//
-// Custom Expo config plugin để thêm <queries> vào AndroidManifest.xml
-// cho phép app mở Spotify bằng deep link (spotify:track:xxx, spotify:artist:xxx)
-//
-// Đặt file này tại: plugins/withSpotifyQueries.js
 
 const { withAndroidManifest } = require('@expo/config-plugins');
 
