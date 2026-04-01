@@ -80,13 +80,17 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
       return Object.keys(counts).map(id => {
         const spotifyMeta = rawTopTracks.find(t => t.id === id);
         const fbMeta = metaMap[id];
-        
+        const imageUrl = fbMeta.album_image || spotifyMeta?.album?.images[0]?.url || '';
+
         return {
           ...spotifyMeta,
           id,
           name: fbMeta.track_name,
           artist: fbMeta.artist_name,
-          album_image: fbMeta.album_image,
+          album: {
+            images: [{ url: imageUrl }]
+          },
+          album_image: imageUrl,
           playcount: counts[id],
           artists: spotifyMeta?.artists || [{ name: fbMeta.artist_name }]
         } as any;
@@ -98,12 +102,17 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
       const fbTrack = trackPlays[id];
       const spotifyMeta = rawTopTracks.find(t => t.id === id);
       
+      const imageUrl = fbTrack.album_image || spotifyMeta?.album?.images[0]?.url || '';
+      
       return {
         ...spotifyMeta,
         id,
         name: fbTrack.name || spotifyMeta?.name || 'Unknown Track',
         artist: fbTrack.artist || (spotifyMeta?.artists ? spotifyMeta.artists[0].name : 'Unknown Artist'),
-        album_image: fbTrack.album_image || spotifyMeta?.album?.images[0]?.url,
+        album: {
+           images: [{ url: imageUrl }]
+        },
+        album_image: imageUrl,
         playcount: fbTrack.play_count || 0,
         last_played: fbTrack.last_played || 0,
         artists: spotifyMeta?.artists || [{ name: fbTrack.artist || 'Unknown Artist' }]
@@ -132,18 +141,18 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
         }
       });
 
-      return Object.keys(artistPlays).map(id => {
-        const fbArtist = artistPlays[id];
-        const spotifyMeta = rawTopArtists.find(a => a.id === id);
+      return Object.values(counts).map(item => {
+        // Tìm thông tin nghệ sĩ chính xác từ Firebase node artistPlays nếu có
+        const fbArtist = Object.values(artistPlays).find(a => a.name === item.name);
+        const spotifyMeta = rawTopArtists.find(a => a.name === item.name);
+        
         return {
           ...spotifyMeta,
-          id,
-          name: fbArtist.name || spotifyMeta?.name || 'Unknown Artist',
-          playcount: fbArtist.play_count || 0,
-          images: spotifyMeta?.images || (fbArtist.image_url ? [{ url: fbArtist.image_url }] : []),
-          genres: spotifyMeta?.genres || []
+          name: item.name,
+          playcount: item.count,
+          images: spotifyMeta?.images || (fbArtist?.image_url ? [{ url: fbArtist.image_url }] : [])
         } as any;
-      }).sort((a, b) => (b.playcount as number) - (a.playcount as number));
+      }).sort((a, b) => b.playcount - a.playcount);
     }
 
     const allArtists = Object.keys(artistPlays).map(id => {
