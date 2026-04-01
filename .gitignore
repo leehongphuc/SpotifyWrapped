@@ -41,3 +41,6 @@ yarn-error.*
 /android
 google-credentials*
 render-bot/google-credentials*
+
+# Firebase exports
+nghenhac-*.json
