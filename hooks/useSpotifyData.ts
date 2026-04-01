@@ -118,29 +118,28 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
       }).sort((a, b) => b.playcount - a.playcount);
     }
 
-    // Nhánh default (4 tuần, 6 tháng, Tất cả): dùng play_count tổng từ Firebase
-    const allTracks = Object.keys(trackPlays).map(id => {
-      const fbTrack = trackPlays[id];
-      const spotifyMeta = rawTopTracks.find(t => t.id === id);
-
-      const imageUrl = fbTrack.album_image || spotifyMeta?.album?.images[0]?.url || '';
+    // Nhánh default (4 tuần, 6 tháng, Tất cả): Ưu tiên danh sách gốc từ Spotify API
+    // (Bảo toàn thứ tự xếp hạng chính xác của Spotify tương ứng với timeRange)
+    return rawTopTracks.map(spotifyMeta => {
+      const fbTrack = trackPlays[spotifyMeta.id];
+      const imageUrl = fbTrack?.album_image || spotifyMeta?.album?.images?.[0]?.url || '';
+      const artistName = fbTrack?.artist || (spotifyMeta?.artists ? spotifyMeta.artists[0].name : 'Unknown Artist');
 
       return {
         ...spotifyMeta,
-        id,
-        name: fbTrack.name || spotifyMeta?.name || 'Unknown Track',
-        artist: fbTrack.artist || (spotifyMeta?.artists ? spotifyMeta.artists[0].name : 'Unknown Artist'),
+        id: spotifyMeta.id,
+        name: spotifyMeta.name,
+        artist: artistName,
         album: {
           images: [{ url: imageUrl }]
         },
         album_image: imageUrl,
-        playcount: fbTrack.play_count || 0,
-        last_played: fbTrack.last_played || 0,
-        artists: spotifyMeta?.artists || [{ name: fbTrack.artist || 'Unknown Artist' }]
+        playcount: fbTrack?.play_count || 0, // Vẫn hiển thị số lượt nghe nếu Firebase đã lưu
+        last_played: fbTrack?.last_played || 0,
+        artists: spotifyMeta?.artists || [{ name: artistName }],
+        external_urls: spotifyMeta?.external_urls || { spotify: `https://open.spotify.com/track/${spotifyMeta.id}` }
       } as any;
     });
-
-    return allTracks.sort((a, b) => (b.playcount as number) - (a.playcount as number));
   }, [trackPlays, rawTopTracks, history, timeRange]);
 
   // ── Top Artists ───────────────────────────────────────────────
@@ -204,10 +203,10 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
       }).sort((a, b) => b.playcount - a.playcount);
     }
 
-    // Nhánh default (short/medium/long term): dùng play_count tổng từ Firebase
-    const allArtists = Object.keys(artistPlays).map(id => {
-      const fbArtist = artistPlays[id];
-      const spotifyMeta = rawTopArtists.find(a => a.id === id);
+    // Nhánh default (short/medium/long term): Ưu tiên danh sách gốc từ Spotify API
+    // (Bảo toàn thứ tự xếp hạng chính xác của Spotify tương ứng với từng timeRange)
+    return rawTopArtists.map(spotifyMeta => {
+      const fbArtist = artistPlays[spotifyMeta.id] || artistNameMap[spotifyMeta.name.toLowerCase().trim()];
 
       const imageUrl =
         spotifyMeta?.images?.[0]?.url ||
@@ -216,18 +215,16 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
 
       return {
         ...spotifyMeta,
-        id,
-        name: fbArtist.name || spotifyMeta?.name || 'Unknown Artist',
-        playcount: fbArtist.play_count || 0,
+        id: spotifyMeta.id,
+        name: spotifyMeta.name,
+        playcount: fbArtist?.play_count || 0, // Hiện số lượt nghe nếu Firebase có lưu
         images: imageUrl ? [{ url: imageUrl }] : [],
         genres: spotifyMeta?.genres || [],
         external_urls: spotifyMeta?.external_urls || {
-          spotify: `https://open.spotify.com/artist/${id}`
+          spotify: `https://open.spotify.com/artist/${spotifyMeta.id}`
         }
       } as any;
     });
-
-    return allArtists.sort((a, b) => (b.playcount as number) - (a.playcount as number));
   }, [artistPlays, trackPlays, rawTopArtists, history, timeRange]);
 
   // 2. Save to cache when data updates
