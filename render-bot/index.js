@@ -181,14 +181,17 @@ const checkAndLogPlaycount = async (userId, accessToken) => {
                 headers: { Authorization: `Bearer ${accessToken}` }
               });
               return { 
+                id: artist.id, // Lưu ID rõ ràng
                 name: artist.name, 
                 play_count: 0,
                 image_url: artistRes.data.images?.[0]?.url || '' 
               };
             } catch (e) {
-              return { name: artist.name, play_count: 0, image_url: '' };
+              return { id: artist.id, name: artist.name, play_count: 0, image_url: '' };
             }
           }
+          // Luôn cập nhật ID nếu chưa có
+          aData.id = artist.id;
           if (!aData.image_url) {
              try {
               const artistRes = await axios.get(`https://api.spotify.com/v1/artists/${artist.id}`, {

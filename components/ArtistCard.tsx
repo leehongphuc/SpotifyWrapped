@@ -29,7 +29,20 @@ export function ArtistCard({ artist, rank, onPress }: ArtistCardProps) {
   const artistImage = artist?.images?.[0]?.url || '';
   const topGenre = artist?.genres?.[0] || '';
   const rankLabel = rank < 10 ? `0${rank}` : `${rank}`;
-  const rankColor = rank === 1 ? Colors.gold : rank === 2 ? Colors.silver : rank === 3 ? Colors.bronze : Colors.textMuted;
+  const rankColor =
+    rank === 1 ? Colors.gold :
+      rank === 2 ? Colors.silver :
+        rank === 3 ? Colors.bronze :
+          Colors.textMuted;
+
+  // FIX: Nếu không có ID → fallback search Spotify theo tên nghệ sĩ
+  const handleOpenSpotify = () => {
+    const artistId = artist?.id || '';
+    const fallback =
+      artist?.external_urls?.spotify ||
+      `https://open.spotify.com/search/${encodeURIComponent(artist?.name || '')}`;
+    openInSpotify('artist', artistId, fallback);
+  };
 
   return (
     <Animated.View style={{ opacity }}>
@@ -94,9 +107,10 @@ export function ArtistCard({ artist, rank, onPress }: ArtistCardProps) {
               </View>
             </View>
 
+            {/* FIX: Dùng handleOpenSpotify để guard ID undefined */}
             <TouchableOpacity
               style={styles.spotifyBtn}
-              onPress={() => openInSpotify('artist', artist.id, artist.external_urls?.spotify || 'https://spotify.com')}
+              onPress={handleOpenSpotify}
             >
               <LinearGradient colors={['#1DB954', '#17A349']} style={styles.spotifyBtnBg}>
                 <Text style={styles.spotifyBtnText}>Mở trong Spotify</Text>

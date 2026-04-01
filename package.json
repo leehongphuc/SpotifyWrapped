@@ -18,6 +18,7 @@
     "date-fns": "^4.1.0",
     "expo": "55.0.10-canary-20260327-0789fbc",
     "expo-auth-session": "55.0.11-canary-20260327-0789fbc",
+    "expo-build-properties": "^55.0.11-canary-20260327-0789fbc",
     "expo-crypto": "55.0.11-canary-20260327-0789fbc",
     "expo-font": "55.0.5-canary-20260327-0789fbc",
     "expo-linear-gradient": "55.0.10-canary-20260327-0789fbc",
@@ -27,9 +28,9 @@
     "react": "19.2.0",
     "react-native": "0.83.4",
     "react-native-chart-kit": "^6.12.0",
-    "react-native-reanimated": "~4.2.1",
+    "react-native-reanimated": "4.2.1",
     "react-native-safe-area-context": "~5.6.2",
-    "react-native-svg": "~15.15.3"
+    "react-native-svg": "15.15.3"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

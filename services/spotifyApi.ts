@@ -42,7 +42,7 @@ spotifyAxios.interceptors.response.use(
 
     // Nếu là lỗi 401 (Hết hạn token) và chưa thử lại lần nào
     if (response?.status === 401 && !originalRequest._retry) {
-      
+
       // Trường hợp 1: Nếu có một yêu cầu khác đang đi Refresh Token rồi
       if (isRefreshing) {
         return new Promise((resolve) => {
@@ -227,18 +227,18 @@ export function extractGenres(artists: SpotifyArtist[]): { genre: string; count:
     .map(([genre, count]) => ({ genre, count }));
 }
 
-/** 
- * Format tổng thời gian đã nghe thực tế từ Firebase (ms) -> "X phút" hoặc "Xg Yp" 
+/**
+ * Format tổng thời gian đã nghe thực tế từ Firebase (ms) -> "X phút" hoặc "Xg Yp"
  */
 export function formatRealMinutesListened(totalListenedMs: number): string {
   if (!totalListenedMs || totalListenedMs === 0) return '0 phút';
-  
+
   const minutes = Math.floor(totalListenedMs / 60000);
-  
+
   if (minutes < 60) {
     return `${minutes} phút`;
   }
-  
+
   const hours = Math.floor(minutes / 60);
   const remainMins = minutes % 60;
   return `${hours}g ${remainMins}${remainMins ? 'p' : ''}`;
@@ -272,24 +272,41 @@ export function formatNumber(n: number): string {
   return n.toString();
 }
 
-/** 
+/**
  * Điều hướng tới Spotify bằng URI Scheme (Direct App Deep Link)
+ * Bỏ canOpenURL vì không đáng tin trên Android (cần <queries> trong Manifest).
+ * Dùng try/catch trực tiếp — nếu URI mở được thì mở, không thì fallback về web.
+ *
  * @param type 'track' | 'artist' | 'album'
  * @param id Spotify ID
  * @param fallbackUrl Link https://open.spotify.com/...
  */
-export async function openInSpotify(type: 'track' | 'artist' | 'album', id: string, fallbackUrl: string) {
+export async function openInSpotify(
+  type: 'track' | 'artist' | 'album',
+  id: string,
+  fallbackUrl: string
+) {
+  // Guard: ID không hợp lệ → fallback ngay
+  if (!id || id === 'undefined' || id === 'null') {
+    try {
+      await Linking.openURL(fallbackUrl);
+    } catch (e) {
+      console.warn('openInSpotify: failed to open fallback URL', e);
+    }
+    return;
+  }
+
   const uri = `spotify:${type}:${id}`;
   try {
-    const canOpen = await Linking.canOpenURL(uri);
-    if (canOpen) {
-      await Linking.openURL(uri);
-    } else {
+    // Thử mở Spotify app trực tiếp, không dùng canOpenURL
+    await Linking.openURL(uri);
+  } catch {
+    // URI không mở được (app chưa cài hoặc OS chặn) → web fallback
+    try {
       await Linking.openURL(fallbackUrl);
+    } catch (e) {
+      console.warn('openInSpotify: failed to open both URI and fallback', e);
     }
-  } catch (err) {
-    console.warn('Failed to open Spotify URI, falling back to web URL', err);
-    await Linking.openURL(fallbackUrl);
   }
 }
 

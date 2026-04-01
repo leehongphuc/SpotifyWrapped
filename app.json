@@ -25,13 +25,28 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "package": "com.teen.spotifywrapped",
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "spotifywrapped"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-web-browser"
+      "expo-web-browser",
+      "./plugins/withSpotifyQueries"
     ],
     "extra": {
       "spotifyClientId": "d80501e40c4d45adb2b11a05f0f36102",
