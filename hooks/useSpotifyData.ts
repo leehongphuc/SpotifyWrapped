@@ -35,7 +35,7 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
   const [cachedTracks, setCachedTracks] = useState<Record<string, SpotifyTrack[]>>({});
   const [cachedArtists, setCachedArtists] = useState<Record<string, SpotifyArtist[]>>({});
 
-  // 1. Load cache on mount
+  // Load cache on mount
   useEffect(() => {
     const loadCache = async () => {
       try {
@@ -50,18 +50,13 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
     loadCache();
   }, []);
 
-  // ── React Query Hooks ──
-  const {
-    profileQuery,
-    tracksQuery,
-    artistsQuery,
-    playlistsQuery,
-    recentQuery,
-  } = useSpotifyQueries(isAuthenticated, timeRange);
+  // Chỉ lấy profile + playlists từ Spotify API (không lấy tracks/artists)
+  const { profileQuery, playlistsQuery, recentQuery } = useSpotifyQueries(
+    isAuthenticated,
+    timeRange
+  );
 
   const user = profileQuery.data || null;
-  const rawTopTracks = tracksQuery.data || [];
-  const rawTopArtists = artistsQuery.data || [];
   const playlists = playlistsQuery.data || [];
   const recentlyPlayed = recentQuery.data || [];
 
@@ -71,199 +66,193 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
     trackPlays,
     artistPlays,
     history,
-    attachPlaycount,
-    attachArtistStats
   } = useFirebaseStats(user?.id);
 
-  // ── Top Tracks ────────────────────────────────────────────────
+  // ── Top Tracks: 100% từ Firebase ─────────────────────────────
   const topTracks = useMemo(() => {
     const now = Date.now();
 
-    // Nhánh 1_day / 1_week: đếm từ history, KHÔNG cộng thêm currentPlaying
-    // vì bài đang phát đã được Firebase tracker ghi vào history rồi → tránh đếm 2 lần
-    if ((timeRange === '1_day' || timeRange === '1_week') && history.length > 0) {
-      const msLimit = timeRange === '1_day'
-        ? 24 * 60 * 60 * 1000
-        : 7 * 24 * 60 * 60 * 1000;
+    const msLimit: Record<TimeRange, number> = {
+      '1_day': 1 * 24 * 60 * 60 * 1000,
+      '1_week': 7 * 24 * 60 * 60 * 1000,
+      'short_term': 28 * 24 * 60 * 60 * 1000,  // ~4 tuần
+      'medium_term': 180 * 24 * 60 * 60 * 1000, // ~6 tháng
+      'long_term': Infinity,                   // Tất cả
+    };
 
-      const counts: Record<string, number> = {};
+    const limit = msLimit[timeRange];
 
-      history.forEach(item => {
-        if (now - item.played_at < msLimit) {
-          counts[item.track_id] = (counts[item.track_id] || 0) + 1;
-        }
-      });
+    // Đếm số lần nghe từ history trong khoảng thời gian
+    const counts: Record<string, number> = {};
+    const listenedMs: Record<string, number> = {};
 
-      return Object.keys(counts).map(id => {
-        const spotifyMeta = rawTopTracks.find(t => t.id === id);
-        const fbTrack = trackPlays[id];
-
-        const trackName = fbTrack?.name || spotifyMeta?.name || 'Unknown Track';
-        const artistName = fbTrack?.artist || (spotifyMeta?.artists ? spotifyMeta.artists[0].name : 'Unknown Artist');
-        const imageUrl = fbTrack?.album_image || spotifyMeta?.album?.images[0]?.url || '';
-
-        return {
-          ...spotifyMeta,
-          id,
-          name: trackName,
-          artist: artistName,
-          album: {
-            images: [{ url: imageUrl }]
-          },
-          album_image: imageUrl,
-          playcount: counts[id],
-          artists: spotifyMeta?.artists || [{ name: artistName }],
-          external_urls: spotifyMeta?.external_urls || { spotify: `https://open.spotify.com/track/${id}` }
-        } as any;
-      }).sort((a, b) => b.playcount - a.playcount);
-    }
-
-    // Nhánh default (4 tuần, 6 tháng, Tất cả): Ưu tiên danh sách gốc từ Spotify API
-    // (Bảo toàn thứ tự xếp hạng chính xác của Spotify tương ứng với timeRange)
-    return rawTopTracks.map(spotifyMeta => {
-      const fbTrack = trackPlays[spotifyMeta.id];
-      const imageUrl = fbTrack?.album_image || spotifyMeta?.album?.images?.[0]?.url || '';
-      const artistName = fbTrack?.artist || (spotifyMeta?.artists ? spotifyMeta.artists[0].name : 'Unknown Artist');
-
-      return {
-        ...spotifyMeta,
-        id: spotifyMeta.id,
-        name: spotifyMeta.name,
-        artist: artistName,
-        album: {
-          images: [{ url: imageUrl }]
-        },
-        album_image: imageUrl,
-        playcount: fbTrack?.play_count || 0, // Vẫn hiển thị số lượt nghe nếu Firebase đã lưu
-        last_played: fbTrack?.last_played || 0,
-        artists: spotifyMeta?.artists || [{ name: artistName }],
-        external_urls: spotifyMeta?.external_urls || { spotify: `https://open.spotify.com/track/${spotifyMeta.id}` }
-      } as any;
-    });
-  }, [trackPlays, rawTopTracks, history, timeRange]);
-
-  // ── Top Artists ───────────────────────────────────────────────
-  const topArtists = useMemo(() => {
-    const now = Date.now();
-
-    // Build lookup map: normalized lowercase name -> { fbArtist object with id }
-    // For 1 day/week range which matches by name, not ID
-    const artistNameMap: Record<string, any> = {};
-    Object.entries(artistPlays).forEach(([id, a]: [string, any]) => {
-      if (a.name) {
-        const key = a.name.toLowerCase().trim();
-        artistNameMap[key] = { ...a, id: a.id || id };
+    history.forEach(item => {
+      if (limit === Infinity || now - item.played_at < limit) {
+        counts[item.track_id] = (counts[item.track_id] || 0) + 1;
+        listenedMs[item.track_id] =
+          (listenedMs[item.track_id] || 0) + (item.listened_ms || 0);
       }
     });
 
-    if ((timeRange === '1_day' || timeRange === '1_week') && history.length > 0) {
-      const msLimit = timeRange === '1_day'
-        ? 24 * 60 * 60 * 1000
-        : 7 * 24 * 60 * 60 * 1000;
+    // Nếu không có history → fallback toàn bộ trackPlays sort theo play_count
+    if (Object.keys(counts).length === 0) {
+      return Object.entries(trackPlays)
+        .map(([id, fbTrack]) => ({
+          id,
+          name: fbTrack.name || 'Unknown Track',
+          artist: fbTrack.artist || 'Unknown Artist',
+          album: { images: [{ url: fbTrack.album_image || '' }] },
+          album_image: fbTrack.album_image || '',
+          playcount: fbTrack.play_count || 0,
+          total_listened_ms: fbTrack.total_listened_ms || 0,
+          last_played: fbTrack.last_played || 0,
+          artists: [{ name: fbTrack.artist || 'Unknown Artist' }],
+          external_urls: { spotify: `https://open.spotify.com/track/${id}` },
+        } as any))
+        .sort((a, b) => b.playcount - a.playcount);
+    }
 
-      const counts: Record<string, { count: number; name: string }> = {};
+    return Object.keys(counts)
+      .map(id => {
+        const fbTrack = trackPlays[id];
+        return {
+          id,
+          name: fbTrack?.name || 'Unknown Track',
+          artist: fbTrack?.artist || 'Unknown Artist',
+          album: { images: [{ url: fbTrack?.album_image || '' }] },
+          album_image: fbTrack?.album_image || '',
+          playcount: counts[id],
+          total_listened_ms: listenedMs[id] || fbTrack?.total_listened_ms || 0,
+          last_played: fbTrack?.last_played || 0,
+          artists: [{ name: fbTrack?.artist || 'Unknown Artist' }],
+          external_urls: { spotify: `https://open.spotify.com/track/${id}` },
+        } as any;
+      })
+      .sort((a, b) => b.playcount - a.playcount);
+  }, [trackPlays, history, timeRange]);
 
-      history.forEach(item => {
-        if (now - item.played_at < msLimit) {
-          const fbTrack = trackPlays[item.track_id];
-          if (fbTrack && fbTrack.artist) {
-            const names = fbTrack.artist.split(',').map((n: string) => n.trim());
-            names.forEach((aName: string) => {
-              if (!counts[aName]) counts[aName] = { count: 0, name: aName };
-              counts[aName].count++;
-            });
-          }
-        }
-      });
+  // ── Top Artists: 100% từ Firebase ────────────────────────────
+  const topArtists = useMemo(() => {
+    const now = Date.now();
 
-      return Object.values(counts).map(item => {
+    const msLimit: Record<TimeRange, number> = {
+      '1_day': 1 * 24 * 60 * 60 * 1000,
+      '1_week': 7 * 24 * 60 * 60 * 1000,
+      'short_term': 28 * 24 * 60 * 60 * 1000,
+      'medium_term': 180 * 24 * 60 * 60 * 1000,
+      'long_term': Infinity,
+    };
+
+    const limit = msLimit[timeRange];
+
+    // Build name → artistPlays lookup (normalize)
+    const artistNameMap: Record<string, any> = {};
+    Object.entries(artistPlays).forEach(([id, a]: [string, any]) => {
+      if (a.name) {
+        artistNameMap[a.name.toLowerCase().trim()] = { ...a, id: a.id || id };
+      }
+    });
+
+    // Đếm lượt nghe từ history
+    const counts: Record<string, { count: number; name: string }> = {};
+
+    history.forEach(item => {
+      if (limit === Infinity || now - item.played_at < limit) {
+        const fbTrack = trackPlays[item.track_id];
+        const artistStr =
+          fbTrack?.artist || item.artist_name || '';
+        if (!artistStr) return;
+
+        artistStr.split(',').map((n: string) => n.trim()).forEach((aName: string) => {
+          if (!aName) return;
+          if (!counts[aName]) counts[aName] = { count: 0, name: aName };
+          counts[aName].count++;
+        });
+      }
+    });
+
+    // Nếu không có history → fallback toàn bộ artistPlays sort theo play_count
+    if (Object.keys(counts).length === 0) {
+      return Object.entries(artistPlays)
+        .map(([id, a]: [string, any]) => ({
+          id: a.id || id,
+          name: a.name || 'Unknown Artist',
+          playcount: a.play_count || 0,
+          images: a.image_url ? [{ url: a.image_url }] : [],
+          genres: [],
+          external_urls: {
+            spotify: `https://open.spotify.com/artist/${a.id || id}`,
+          },
+        } as any))
+        .sort((a, b) => b.playcount - a.playcount);
+    }
+
+    return Object.values(counts)
+      .map(item => {
         const key = item.name.toLowerCase().trim();
-        const fbArtist = artistNameMap[key]; // dùng normalized map
-        const spotifyMeta = rawTopArtists.find(a => a.name.toLowerCase().trim() === key);
-
-        const imageUrl =
-          spotifyMeta?.images?.[0]?.url ||
-          fbArtist?.image_url ||
-          '';
-
-        const artistId = spotifyMeta?.id || fbArtist?.id || '';
+        const fbArtist = artistNameMap[key];
+        const artistId = fbArtist?.id || '';
+        const imageUrl = fbArtist?.image_url || '';
 
         return {
-          ...spotifyMeta,
           id: artistId,
           name: item.name,
           playcount: item.count,
           images: imageUrl ? [{ url: imageUrl }] : [],
-          external_urls: spotifyMeta?.external_urls || {
+          genres: [],
+          external_urls: {
             spotify: artistId
               ? `https://open.spotify.com/artist/${artistId}`
-              : `https://open.spotify.com/search/${encodeURIComponent(item.name)}`
-          }
+              : `https://open.spotify.com/search/${encodeURIComponent(item.name)}`,
+          },
         } as any;
-      }).sort((a, b) => b.playcount - a.playcount);
-    }
+      })
+      .sort((a, b) => b.playcount - a.playcount);
+  }, [artistPlays, trackPlays, history, timeRange]);
 
-    // Nhánh default (short/medium/long term): Ưu tiên danh sách gốc từ Spotify API
-    // (Bảo toàn thứ tự xếp hạng chính xác của Spotify tương ứng với từng timeRange)
-    return rawTopArtists.map(spotifyMeta => {
-      const fbArtist = artistPlays[spotifyMeta.id] || artistNameMap[spotifyMeta.name.toLowerCase().trim()];
-
-      const imageUrl =
-        spotifyMeta?.images?.[0]?.url ||
-        fbArtist?.image_url ||
-        '';
-
-      return {
-        ...spotifyMeta,
-        id: spotifyMeta.id,
-        name: spotifyMeta.name,
-        playcount: fbArtist?.play_count || 0, // Hiện số lượt nghe nếu Firebase có lưu
-        images: imageUrl ? [{ url: imageUrl }] : [],
-        genres: spotifyMeta?.genres || [],
-        external_urls: spotifyMeta?.external_urls || {
-          spotify: `https://open.spotify.com/artist/${spotifyMeta.id}`
-        }
-      } as any;
+  // Genres vẫn dùng artistPlays từ Firebase
+  const genres = useMemo(() => {
+    const genreMap: Record<string, number> = {};
+    Object.values(artistPlays).forEach((a: any) => {
+      (a.genres || []).forEach((g: string) => {
+        genreMap[g] = (genreMap[g] || 0) + 1;
+      });
     });
-  }, [artistPlays, trackPlays, rawTopArtists, history, timeRange]);
+    return Object.entries(genreMap)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([genre, count]) => ({ genre, count }));
+  }, [artistPlays]);
 
-  // 2. Save to cache when data updates
+  // Save cache
   useEffect(() => {
-    const saveCache = async () => {
-      if (topTracks.length > 0) {
-        const newCache = { ...cachedTracks, [timeRange]: topTracks };
-        await AsyncStorage.setItem('cache_top_tracks', JSON.stringify(newCache));
-      }
-    };
-    saveCache();
+    if (topTracks.length > 0) {
+      const newCache = { ...cachedTracks, [timeRange]: topTracks };
+      AsyncStorage.setItem('cache_top_tracks', JSON.stringify(newCache)).catch(() => { });
+    }
   }, [topTracks, timeRange]);
 
   useEffect(() => {
-    const saveCache = async () => {
-      if (topArtists.length > 0) {
-        const newCache = { ...cachedArtists, [timeRange]: topArtists };
-        await AsyncStorage.setItem('cache_top_artists', JSON.stringify(newCache));
-      }
-    };
-    saveCache();
+    if (topArtists.length > 0) {
+      const newCache = { ...cachedArtists, [timeRange]: topArtists };
+      AsyncStorage.setItem('cache_top_artists', JSON.stringify(newCache)).catch(() => { });
+    }
   }, [topArtists, timeRange]);
 
-  const genres = useMemo(() => extractGenres(rawTopArtists), [rawTopArtists]);
+  const loading = profileQuery.isLoading;
+  const refreshing = profileQuery.isFetching;
+  const error = profileQuery.error as any;
 
-  const loading = profileQuery.isLoading || tracksQuery.isLoading || artistsQuery.isLoading;
-  const refreshing = tracksQuery.isRefetching || artistsQuery.isRefetching;
-  const error = (profileQuery.error || tracksQuery.error || artistsQuery.error) as any;
-
-  // Final: dùng data mới nếu có, không thì fallback cache
-  const finalTopTracks = topTracks.length > 0 ? topTracks : (cachedTracks[timeRange] || []);
-  const finalTopArtists = topArtists.length > 0 ? topArtists : (cachedArtists[timeRange] || []);
+  const finalTopTracks =
+    topTracks.length > 0 ? topTracks : cachedTracks[timeRange] || [];
+  const finalTopArtists =
+    topArtists.length > 0 ? topArtists : cachedArtists[timeRange] || [];
 
   const refresh = useCallback(() => {
-    tracksQuery.refetch();
-    artistsQuery.refetch();
+    profileQuery.refetch();
     playlistsQuery.refetch();
     recentQuery.refetch();
-  }, [tracksQuery, artistsQuery, playlistsQuery, recentQuery]);
+  }, [profileQuery, playlistsQuery, recentQuery]);
 
   return {
     user,
@@ -281,6 +270,5 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
     firebaseStats,
     currentPlaying,
     trackPlays,
-
   };
 }
