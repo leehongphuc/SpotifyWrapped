@@ -147,8 +147,16 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
   const topArtists = useMemo(() => {
     const now = Date.now();
 
-    // Nhánh 1_day / 1_week: đếm từ history, KHÔNG cộng thêm currentPlaying
-    // vì nghệ sĩ của bài đang phát đã có trong history rồi → tránh đếm 2 lần
+    // Build lookup map: normalized lowercase name -> { fbArtist object with id }
+    // For 1 day/week range which matches by name, not ID
+    const artistNameMap: Record<string, any> = {};
+    Object.entries(artistPlays).forEach(([id, a]: [string, any]) => {
+      if (a.name) {
+        const key = a.name.toLowerCase().trim();
+        artistNameMap[key] = { ...a, id: a.id || id };
+      }
+    });
+
     if ((timeRange === '1_day' || timeRange === '1_week') && history.length > 0) {
       const msLimit = timeRange === '1_day'
         ? 24 * 60 * 60 * 1000
@@ -170,23 +178,27 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
       });
 
       return Object.values(counts).map(item => {
-        const fbArtist = Object.values(artistPlays).find((a: any) => a.name === item.name) as any;
-        const spotifyMeta = rawTopArtists.find(a => a.name === item.name);
+        const key = item.name.toLowerCase().trim();
+        const fbArtist = artistNameMap[key]; // dùng normalized map
+        const spotifyMeta = rawTopArtists.find(a => a.name.toLowerCase().trim() === key);
 
-        // Ưu tiên: Spotify images → Firebase image_url → array rỗng
         const imageUrl =
           spotifyMeta?.images?.[0]?.url ||
           fbArtist?.image_url ||
           '';
 
+        const artistId = spotifyMeta?.id || fbArtist?.id || '';
+
         return {
           ...spotifyMeta,
-          id: spotifyMeta?.id || fbArtist?.id || '', // Đảm bảo luôn có ID
+          id: artistId,
           name: item.name,
           playcount: item.count,
           images: imageUrl ? [{ url: imageUrl }] : [],
-          external_urls: spotifyMeta?.external_urls || { 
-            spotify: `https://open.spotify.com/artist/${spotifyMeta?.id || fbArtist?.id || ''}` 
+          external_urls: spotifyMeta?.external_urls || {
+            spotify: artistId
+              ? `https://open.spotify.com/artist/${artistId}`
+              : `https://open.spotify.com/search/${encodeURIComponent(item.name)}`
           }
         } as any;
       }).sort((a, b) => b.playcount - a.playcount);
@@ -197,7 +209,6 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
       const fbArtist = artistPlays[id];
       const spotifyMeta = rawTopArtists.find(a => a.id === id);
 
-      // Ưu tiên: Spotify images → Firebase image_url → array rỗng
       const imageUrl =
         spotifyMeta?.images?.[0]?.url ||
         fbArtist?.image_url ||
@@ -210,6 +221,9 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
         playcount: fbArtist.play_count || 0,
         images: imageUrl ? [{ url: imageUrl }] : [],
         genres: spotifyMeta?.genres || [],
+        external_urls: spotifyMeta?.external_urls || {
+          spotify: `https://open.spotify.com/artist/${id}`
+        }
       } as any;
     });
 
