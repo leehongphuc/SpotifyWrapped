@@ -9,6 +9,15 @@ export interface FirebaseStats {
   last_updated: number;
 }
 
+export interface HistoryRecord {
+  track_id: string;
+  track_name: string;
+  artist_name: string;
+  album_image: string;
+  played_at: number;
+  listened_ms: number; // Mốc thời gian thực tế đã nghe
+}
+
 export interface CurrentPlaying {
   track_id: string;
   track_name: string;
@@ -26,6 +35,8 @@ export function useFirebaseStats(userId: string | undefined) {
   const [trackPlays, setTrackPlays] = useState<Record<string, any>>({});
   // Dictionary map `artistId` -> artist object {name, play_count}
   const [artistPlays, setArtistPlays] = useState<Record<string, any>>({});
+  // List of historical play records
+  const [history, setHistory] = useState<HistoryRecord[]>([]);
 
   useEffect(() => {
     if (!userId) {
@@ -74,11 +85,27 @@ export function useFirebaseStats(userId: string | undefined) {
       }
     });
 
+    // Lắng nghe lịch sử lượt nghe (History)
+    const historyRef = ref(db, `users/${userId}/history`);
+    const unsubHistory = onValue(historyRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        const list: HistoryRecord[] = Object.keys(data).map(key => ({
+          ...data[key],
+          id: key
+        }));
+        setHistory(list.sort((a, b) => b.played_at - a.played_at));
+      } else {
+        setHistory([]);
+      }
+    });
+
     return () => {
       unsubStats();
       unsubPlaying();
       unsubTracks();
       unsubArtists();
+      unsubHistory();
     };
   }, [userId]);
 
@@ -87,7 +114,8 @@ export function useFirebaseStats(userId: string | undefined) {
     if (Object.keys(trackPlays).length === 0) return tracks;
     return tracks.map(t => ({
       ...t,
-      playcount: trackPlays[t.id]?.play_count || 0
+      playcount: trackPlays[t.id]?.play_count || 0,
+      total_listened_ms: trackPlays[t.id]?.total_listened_ms || 0
     }));
   };
 
@@ -116,6 +144,7 @@ export function useFirebaseStats(userId: string | undefined) {
     currentPlaying,
     trackPlays,
     artistPlays,
+    history,
     attachPlaycount,
     attachArtistStats
   };

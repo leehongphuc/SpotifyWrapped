@@ -124,6 +124,11 @@ function AppContent() {
       ? (trackPlays[selectedTrack.id]?.play_count || selectedTrack.playcount || 0)
       : 0;
 
+  const selectedTrackTotalListenedMs =
+    selectedTrack && trackPlays
+      ? (trackPlays[selectedTrack.id]?.total_listened_ms || selectedTrack.total_listened_ms || 0)
+      : 0;
+
   // 👇 Tính tab bar height động theo insets
   const TAB_CONTENT_HEIGHT = 56; // paddingTop(12) + icon + label + paddingBottom(12)
   const tabBarHeight = TAB_CONTENT_HEIGHT + insets.bottom;
@@ -169,6 +174,7 @@ function AppContent() {
           track={selectedTrack}
           rank={selectedTrackRank}
           playcount={selectedTrackPlaycount}
+          totalListenedMs={selectedTrackTotalListenedMs}
           onClose={closeTrackDetail}
         />
       )}

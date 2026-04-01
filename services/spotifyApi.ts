@@ -134,6 +134,7 @@ export interface SpotifyTrack {
   preview_url: string | null;
   external_urls: { spotify: string };
   playcount?: number; // Last.fm
+  total_listened_ms?: number; // Accurate time from Firebase
 }
 
 export interface SpotifyArtist {
@@ -225,9 +226,33 @@ export function extractGenres(artists: SpotifyArtist[]): { genre: string; count:
     .map(([genre, count]) => ({ genre, count }));
 }
 
-/** Tính tổng thời gian phát nhạc 50 bài gần nhất bằng (Lặp x Thời Lượng) (ms) */
+/** 
+ * Format tổng thời gian đã nghe thực tế từ Firebase (ms) -> "X phút" hoặc "Xg Yp" 
+ */
+export function formatRealMinutesListened(totalListenedMs: number): string {
+  if (!totalListenedMs || totalListenedMs === 0) return '0 phút';
+  
+  const minutes = Math.floor(totalListenedMs / 60000);
+  
+  if (minutes < 60) {
+    return `${minutes} phút`;
+  }
+  
+  const hours = Math.floor(minutes / 60);
+  const remainMins = minutes % 60;
+  return `${hours}g ${remainMins}${remainMins ? 'p' : ''}`;
+}
+
+/** Tính tổng thời gian phát nhạc từ Firebase hoặc ước lượng bằng (Lặp x Thời Lượng) (ms) */
 export function calcTotalDuration(tracks: SpotifyTrack[]): number {
-  return tracks.reduce((acc, t) => acc + (t.duration_ms * (t.playcount || 1)), 0);
+  return tracks.reduce((acc, t) => {
+    // Ưu tiên thời gian thực tế cộng dồn từ Firebase
+    if (t.total_listened_ms && t.total_listened_ms > 0) {
+      return acc + t.total_listened_ms;
+    }
+    // Fallback cho dữ liệu cũ: Lặp x Thời lượng
+    return acc + (t.duration_ms * (t.playcount || 1));
+  }, 0);
 }
 
 /** Format ms → "X phút" */

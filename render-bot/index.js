@@ -34,7 +34,7 @@ const db = admin.database();
 
 // --- 2. SPOTIFY APP CREDENTIALS ---
 const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID || 'd80501e40c4d45adb2b11a05f0f36102';
-const SPOTIFY_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET || 'NHẬP_SECRET_CỦA_BẠN'; // Phải lấy từ Spotify Dashboard
+const SPOTIFY_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET || 'c86a8c794f354f3396ae5d69eaf89460'; // Phải lấy từ Spotify Dashboard
 
 // --- 3. CORE BOT LOGIC ---
 const refreshAccessToken = async (userId, refreshToken) => {
@@ -53,11 +53,11 @@ const refreshAccessToken = async (userId, refreshToken) => {
 
     const newAccessToken = res.data.access_token;
     const expiresIn = res.data.expires_in;
-    
+
     // Ghi lại vào DB
     await db.ref(`users/${userId}/tokens/access_token`).set(newAccessToken);
     await db.ref(`users/${userId}/tokens/expires_at`).set(Date.now() + expiresIn * 1000);
-    
+
     return newAccessToken;
   } catch (error) {
     console.error(`Lỗi refresh token cho user ${userId}:`, error.response?.data || error.message);
@@ -88,7 +88,32 @@ const checkAndLogPlaycount = async (userId, accessToken) => {
     // Nếu bài vừa đổi hoặc lặp lại -> Tính 1 lượt nghe mới
     if (isNewSong || isRepeated) {
       console.log(`[+] User ${userId} bắt đầu nghe bài: ${currentTrack.name}`);
-      
+
+      // ─────────────────────────────────────────────────────────
+      // NEW: Cập nhật THỜI GIAN NGHE CHÍNH XÁC cho bài hát TRƯỚC ĐÓ
+      // ─────────────────────────────────────────────────────────
+      if (lastState.track_id && lastState.progress_ms) {
+        const lastTrackRef = db.ref(`users/${userId}/tracks/${lastState.track_id}`);
+        await lastTrackRef.transaction((trackData) => {
+          if (trackData) {
+            trackData.total_listened_ms = (trackData.total_listened_ms || 0) + lastState.progress_ms;
+          }
+          return trackData;
+        });
+
+        // Cập nhật tổng phút nghe (Accurate)
+        const statsRef = db.ref(`users/${userId}/stats`);
+        await statsRef.transaction((stats) => {
+          if (stats) {
+            const addedMinutes = lastState.progress_ms / 60000;
+            stats.total_minutes = (stats.total_minutes || 0) + addedMinutes;
+            stats.last_updated = Date.now();
+          }
+          return stats;
+        });
+      }
+
+      // Tăng Play Count cho bài hát HIỆN TẠI
       const trackRef = db.ref(`users/${userId}/tracks/${currentTrack.id}`);
       await trackRef.transaction((trackData) => {
         if (!trackData) {
@@ -98,7 +123,8 @@ const checkAndLogPlaycount = async (userId, accessToken) => {
             album_image: currentTrack.album?.images[0]?.url || '',
             duration_ms: currentTrack.duration_ms,
             play_count: 1,
-            last_played: Date.now()
+            last_played: Date.now(),
+            total_listened_ms: 0 // Khởi tạo
           };
         }
         trackData.play_count = (trackData.play_count || 0) + 1;
@@ -106,16 +132,15 @@ const checkAndLogPlaycount = async (userId, accessToken) => {
         return trackData;
       });
 
+      // Lượt nghe cho stats (chỉ tăng count)
       const statsRef = db.ref(`users/${userId}/stats`);
       await statsRef.transaction((stats) => {
-        if (!stats) return { total_plays: 1, total_minutes: Math.round(currentTrack.duration_ms/60000), last_updated: Date.now() };
+        if (!stats) return { total_plays: 1, total_minutes: 0, last_updated: Date.now() };
         stats.total_plays = (stats.total_plays || 0) + 1;
-        stats.total_minutes = (stats.total_minutes || 0) + Math.round(currentTrack.duration_ms / 60000);
-        stats.last_updated = Date.now();
         return stats;
       });
 
-      // Ghi nhận lượt nghe cho Nghệ sĩ (hỗ trợ nhiều nghệ sĩ trên một bài)
+      // Ghi nhận lượt nghe cho Nghệ sĩ
       currentTrack.artists.forEach(async (artist) => {
         const artistRef = db.ref(`users/${userId}/artists/${artist.id}`);
         await artistRef.transaction((aData) => {
@@ -124,15 +149,31 @@ const checkAndLogPlaycount = async (userId, accessToken) => {
           return aData;
         });
       });
+
+      // ─────────────────────────────────────────────────────────
+      // Ghi log lịch sử (History) cho bài hát VỪA KẾT THÚC
+      // ─────────────────────────────────────────────────────────
+      if (lastState.track_id && lastState.progress_ms) {
+        const historyRef = db.ref(`users/${userId}/history`);
+        await historyRef.push({
+          track_id: lastState.track_id,
+          track_name: lastState.track_name,
+          artist_name: lastState.artist_name,
+          album_image: lastState.album_image,
+          played_at: admin.database.ServerValue.TIMESTAMP,
+          listened_ms: lastState.progress_ms // Lưu thời gian thực tế đã nghe
+        });
+      }
+      // ─────────────────────────────────────────────────────────
     }
 
-    // Cập nhật trạng thái "Đang phát" (kể cả không tăng playcount)
+    // Cập nhật trạng thái "Đang phát" (Liên tục cập nhật progress_ms)
     await playingRef.set({
       track_id: currentTrack.id,
       track_name: currentTrack.name,
       artist_name: currentTrack.artists.map(a => a.name).join(', '),
       album_image: currentTrack.album?.images[0]?.url || '',
-      progress_ms: newProgressMs,
+      progress_ms: newProgressMs, // QUAN TRỌNG: Lưu tiến trình hiện tại để mốc sau tính toán
       started_at: isNewSong ? Date.now() : (lastState.started_at || Date.now()),
       is_playing: true
     });
@@ -151,7 +192,7 @@ const runBotLoop = async () => {
     for (const userId in users) {
       const user = users[userId];
       if (user.tokens && user.tokens.refresh_token) {
-        
+
         // Kiểm tra xem Access Token còn hạn không
         let accessToken = user.tokens.access_token;
         const expiresAt = user.tokens.expires_at || 0;
@@ -179,7 +220,7 @@ app.get('/', (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Bot server đang chạy port ${PORT}`);
-  
+
   // Chạy Bot mỗi 30 giây để quét nhạc
   setInterval(runBotLoop, 30000);
 });

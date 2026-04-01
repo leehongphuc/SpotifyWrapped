@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../constants/colors';
-import { SpotifyTrack, formatNumber } from '../services/spotifyApi';
+import { SpotifyTrack, formatNumber, formatRealMinutesListened } from '../services/spotifyApi';
 import {
     getAudioFeatures,
     getTrackDetail,
@@ -23,7 +23,6 @@ import {
     formatKey,
     formatBPM,
     formatDurationMs,
-    formatMinutesListened,
 } from '../services/spotifyApiExtended';
 
 const { width, height } = Dimensions.get('window');
@@ -34,6 +33,7 @@ interface TrackDetailScreenProps {
     onClose: () => void;
     // Firebase data
     playcount?: number;
+    totalListenedMs?: number;
 }
 
 
@@ -78,7 +78,9 @@ const ringStyles = StyleSheet.create({
 });
 
 // ── Main Screen ──────────────────────────────────────────────────
-export default function TrackDetailScreen({ track, rank, onClose, playcount = 0 }: TrackDetailScreenProps) {
+export default function TrackDetailScreen({ 
+    track, rank, onClose, playcount = 0, totalListenedMs = 0 
+}: TrackDetailScreenProps) {
     const [detail, setDetail] = useState<TrackDetail | null>(null);
     const [loadingDetail, setLoadingDetail] = useState(true);
 
@@ -118,7 +120,9 @@ export default function TrackDetailScreen({ track, rank, onClose, playcount = 0 
     const artistNames = track?.artists?.map(a => a.name).join(', ') || '—';
     const releaseYear = detail?.album?.release_date?.slice(0, 4) || '';
     const durationMs = detail?.duration_ms || track.duration_ms || 0;
-    const minutesListened = formatMinutesListened(playcount, durationMs);
+    
+    // Sử dụng thời gian nghe thực tế từ Firebase
+    const minutesListened = formatRealMinutesListened(totalListenedMs || track.total_listened_ms || 0);
 
     const rankColor =
         rank === 1 ? Colors.gold :
