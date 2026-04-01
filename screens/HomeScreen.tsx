@@ -1,12 +1,11 @@
 import React, { useRef, useEffect } from 'react';
 import {
   View, Text, Image, StyleSheet, ScrollView,
-  Animated, RefreshControl,
+  Animated, RefreshControl, TouchableOpacity, Linking,
 } from 'react-native';
 import { Colors } from '../constants/colors';
 import { SpotifyUser, SpotifyTrack, SpotifyArtist } from '../services/spotifyApi';
 import { FirebaseStats, CurrentPlaying } from '../hooks/useFirebaseStats';
-import { StatCard } from '../components/StatCard';
 import { TrackCard } from '../components/TrackCard';
 import { ArtistCard } from '../components/ArtistCard';
 import { TrackSkeleton } from '../components/LoadingShimmer';
@@ -127,7 +126,24 @@ export default function HomeScreen({
       <View style={styles.section}>
         <Text style={styles.sectionLabel}>NOW PLAYING</Text>
         {currentPlaying ? (
-          <View style={styles.nowPlayingCard}>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => {
+              const spotifyUri = `spotify:track:${currentPlaying.track_id}`;
+              Linking.canOpenURL(spotifyUri)
+                .then((supported) => {
+                  if (supported) {
+                    Linking.openURL(spotifyUri);
+                  } else {
+                    Linking.openURL(`https://open.spotify.com/track/${currentPlaying.track_id}`);
+                  }
+                })
+                .catch(() => {
+                  Linking.openURL(`https://open.spotify.com/track/${currentPlaying.track_id}`);
+                });
+            }}
+            style={styles.nowPlayingCard}
+          >
             {currentPlaying.album_image ? (
               <Image source={{ uri: currentPlaying.album_image }} style={styles.nowPlayingImg} />
             ) : (
@@ -144,33 +160,39 @@ export default function HomeScreen({
               </Text>
               <AnimatedWave />
             </View>
-          </View>
+            <Text style={styles.nowPlayingOpen}>›</Text>
+          </TouchableOpacity>
         ) : (
-          <View style={styles.nowPlayingEmpty}>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => Linking.openURL('spotify://')}
+            style={styles.nowPlayingEmpty}
+          >
             <Text style={styles.nowPlayingEmptyText}>Không có bài hát đang phát</Text>
-            <Text style={styles.nowPlayingEmptySub}>Mở Spotify để bắt đầu theo dõi</Text>
-          </View>
+            <Text style={styles.nowPlayingEmptySub}>Nhấn để mở Spotify</Text>
+          </TouchableOpacity>
         )}
       </View>
 
       {/* Stats */}
       <View style={styles.section}>
         <Text style={styles.sectionLabel}>THỐNG KÊ</Text>
-        <View style={styles.statRow}>
-          <StatCard
-            emoji="▶"
-            value={`${firebaseStats?.total_plays ?? 0}`}
-            label="Lượt nghe"
-            gradientColors={[Colors.gold, Colors.goldDim]}
-            delay={0}
-          />
-          <StatCard
-            emoji="◷"
-            value={`${Number(firebaseStats?.total_minutes || 0).toFixed(2)}`}
-            label="Phút nghe"
-            gradientColors={['#1E1E1E', '#2A2A2A']}
-            delay={100}
-          />
+        <View style={styles.statsCard}>
+          <View style={styles.statsItem}>
+            <View style={styles.statsIconWrap}>
+              <Text style={styles.statsIcon}>▶</Text>
+            </View>
+            <Text style={styles.statsValue}>{firebaseStats?.total_plays ?? 0}</Text>
+            <Text style={styles.statsLabel}>lượt nghe</Text>
+          </View>
+          <View style={styles.statsDivider} />
+          <View style={styles.statsItem}>
+            <View style={styles.statsIconWrap}>
+              <Text style={styles.statsIcon}>◷</Text>
+            </View>
+            <Text style={styles.statsValue}>{Number(firebaseStats?.total_minutes || 0).toFixed(1)}</Text>
+            <Text style={styles.statsLabel}>phút nghe</Text>
+          </View>
         </View>
       </View>
 
@@ -275,7 +297,39 @@ const styles = StyleSheet.create({
   },
   nowPlayingEmptyText: { color: Colors.textSecondary, fontSize: 14, fontWeight: '600' },
   nowPlayingEmptySub: { color: Colors.textMuted, fontSize: 12 },
-  statRow: { flexDirection: 'row', gap: 12 },
+  nowPlayingOpen: { color: Colors.gold, fontSize: 22, fontWeight: '300', marginLeft: 4 },
+  statsCard: {
+    flexDirection: 'row',
+    backgroundColor: Colors.surface,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingVertical: 20,
+    paddingHorizontal: 8,
+  },
+  statsItem: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 6,
+  },
+  statsIconWrap: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: 'rgba(201, 168, 76, 0.12)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  statsIcon: { color: Colors.gold, fontSize: 14 },
+  statsValue: {
+    color: Colors.textPrimary, fontSize: 24, fontWeight: '800',
+    letterSpacing: -0.5,
+  },
+  statsLabel: {
+    color: Colors.textMuted, fontSize: 11, fontWeight: '600',
+    textTransform: 'uppercase', letterSpacing: 1,
+  },
+  statsDivider: {
+    width: 1, backgroundColor: Colors.border,
+    marginVertical: 4,
+  },
   factCard: {
     flexDirection: 'row', backgroundColor: Colors.surface,
     borderRadius: 4, borderWidth: 1, borderColor: Colors.border, overflow: 'hidden',

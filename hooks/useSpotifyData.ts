@@ -153,37 +153,53 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
       }
     });
 
-    // Đếm lượt nghe từ history
-    const counts: Record<string, { count: number; name: string }> = {};
+    // Đếm lượt nghe + số bài riêng biệt từ history
+    const counts: Record<string, { count: number; name: string; trackIds: Set<string> }> = {};
 
     history.forEach(item => {
       if (limit === Infinity || now - item.played_at < limit) {
         const fbTrack = trackPlays[item.track_id];
-        const artistStr =
-          fbTrack?.artist || item.artist_name || '';
+        const artistStr = fbTrack?.artist || item.artist_name || '';
         if (!artistStr) return;
 
         artistStr.split(',').map((n: string) => n.trim()).forEach((aName: string) => {
           if (!aName) return;
-          if (!counts[aName]) counts[aName] = { count: 0, name: aName };
+          if (!counts[aName]) counts[aName] = { count: 0, name: aName, trackIds: new Set() };
           counts[aName].count++;
+          counts[aName].trackIds.add(item.track_id); // đếm bài riêng biệt
         });
       }
     });
 
-    // Nếu không có history → fallback toàn bộ artistPlays sort theo play_count
+    // Nếu không có history → fallback toàn bộ artistPlays
     if (Object.keys(counts).length === 0) {
+      // Tính tracks_count từ trackPlays cho fallback
+      const artistTrackCount: Record<string, Set<string>> = {};
+      Object.entries(trackPlays).forEach(([trackId, fbTrack]: [string, any]) => {
+        const artistStr = fbTrack?.artist || '';
+        artistStr.split(',').map((n: string) => n.trim()).forEach((aName: string) => {
+          if (!aName) return;
+          const key = aName.toLowerCase().trim();
+          if (!artistTrackCount[key]) artistTrackCount[key] = new Set();
+          artistTrackCount[key].add(trackId);
+        });
+      });
+
       return Object.entries(artistPlays)
-        .map(([id, a]: [string, any]) => ({
-          id: a.id || id,
-          name: a.name || 'Unknown Artist',
-          playcount: a.play_count || 0,
-          images: a.image_url ? [{ url: a.image_url }] : [],
-          genres: [],
-          external_urls: {
-            spotify: `https://open.spotify.com/artist/${a.id || id}`,
-          },
-        } as any))
+        .map(([id, a]: [string, any]) => {
+          const key = (a.name || '').toLowerCase().trim();
+          return {
+            id: a.id || id,
+            name: a.name || 'Unknown Artist',
+            playcount: a.play_count || 0,
+            tracks_count: artistTrackCount[key]?.size || 1,
+            images: a.image_url ? [{ url: a.image_url }] : [],
+            genres: [],
+            external_urls: {
+              spotify: `https://open.spotify.com/artist/${a.id || id}`,
+            },
+          } as any;
+        })
         .sort((a, b) => b.playcount - a.playcount);
     }
 
@@ -198,6 +214,7 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
           id: artistId,
           name: item.name,
           playcount: item.count,
+          tracks_count: item.trackIds.size, // ✅ số bài riêng biệt đã nghe
           images: imageUrl ? [{ url: imageUrl }] : [],
           genres: [],
           external_urls: {
