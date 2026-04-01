@@ -208,9 +208,6 @@ const checkAndLogPlaycount = async (userId, accessToken) => {
         const historyRef = db.ref(`users/${userId}/history`);
         await historyRef.push({
           track_id: lastState.track_id,
-          track_name: lastState.track_name,
-          artist_name: lastState.artist_name,
-          album_image: lastState.album_image,
           played_at: admin.database.ServerValue.TIMESTAMP,
           listened_ms: lastState.progress_ms // Lưu thời gian thực tế đã nghe
         });

@@ -79,20 +79,23 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
 
       return Object.keys(counts).map(id => {
         const spotifyMeta = rawTopTracks.find(t => t.id === id);
-        const fbMeta = metaMap[id];
-        const imageUrl = fbMeta.album_image || spotifyMeta?.album?.images[0]?.url || '';
+        const fbTrack = trackPlays[id]; // Lấy metadata từ node tracks của Firebase
+        
+        const trackName = fbTrack?.name || spotifyMeta?.name || 'Unknown Track';
+        const artistName = fbTrack?.artist || (spotifyMeta?.artists ? spotifyMeta.artists[0].name : 'Unknown Artist');
+        const imageUrl = fbTrack?.album_image || spotifyMeta?.album?.images[0]?.url || '';
 
         return {
           ...spotifyMeta,
           id,
-          name: fbMeta.track_name,
-          artist: fbMeta.artist_name,
+          name: trackName,
+          artist: artistName,
           album: {
             images: [{ url: imageUrl }]
           },
           album_image: imageUrl,
           playcount: counts[id],
-          artists: spotifyMeta?.artists || [{ name: fbMeta.artist_name }]
+          artists: spotifyMeta?.artists || [{ name: artistName }]
         } as any;
       }).sort((a, b) => b.playcount - a.playcount);
     }
@@ -133,11 +136,15 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
 
       history.forEach(item => {
         if (now - item.played_at < msLimit) {
-          // Lấy ID nghệ sĩ từ mảng (Giả sử log history có lưu ID nghệ sĩ hoặc chúng ta map từ trackId)
-          // Đơn giản nhất là đếm theo tên nghệ sĩ nếu log history không có artist_id
-          const aName = item.artist_name.split(',')[0].trim();
-          if (!counts[aName]) counts[aName] = { count: 0, name: aName };
-          counts[aName].count++;
+          // Lấy metadata nghệ sĩ từ node tracks dựa trên track_id trong history
+          const fbTrack = trackPlays[item.track_id];
+          if (fbTrack && fbTrack.artist) {
+            const names = fbTrack.artist.split(',').map((n: string) => n.trim());
+            names.forEach((aName: string) => {
+              if (!counts[aName]) counts[aName] = { count: 0, name: aName };
+              counts[aName].count++;
+            });
+          }
         }
       });
 
