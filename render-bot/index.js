@@ -140,15 +140,40 @@ const checkAndLogPlaycount = async (userId, accessToken) => {
         return stats;
       });
 
-      // Ghi nhận lượt nghe cho Nghệ sĩ
-      currentTrack.artists.forEach(async (artist) => {
+      // Ghi nhận lượt nghe cho Nghệ sĩ (Bổ sung logic Lấy Ảnh nếu chưa có)
+      for (const artist of currentTrack.artists) {
         const artistRef = db.ref(`users/${userId}/artists/${artist.id}`);
-        await artistRef.transaction((aData) => {
-          if (!aData) return { name: artist.name, play_count: 1 };
+        await artistRef.transaction(async (aData) => {
+          if (!aData) {
+            // Lần đầu gặp nghệ sĩ này -> Cố gắng lấy ảnh từ Spotify
+            try {
+              const artistRes = await axios.get(`https://api.spotify.com/v1/artists/${artist.id}`, {
+                headers: { Authorization: `Bearer ${accessToken}` }
+              });
+              return { 
+                name: artist.name, 
+                play_count: 1,
+                image_url: artistRes.data.images?.[0]?.url || '' 
+              };
+            } catch (e) {
+              return { name: artist.name, play_count: 1, image_url: '' };
+            }
+          }
+          
+          // Nghệ sĩ đã tồn tại, nếu chưa có ảnh thì cố gắng cập nhật
+          if (!aData.image_url) {
+             try {
+              const artistRes = await axios.get(`https://api.spotify.com/v1/artists/${artist.id}`, {
+                headers: { Authorization: `Bearer ${accessToken}` }
+              });
+              aData.image_url = artistRes.data.images?.[0]?.url || '';
+            } catch (e) {}
+          }
+
           aData.play_count = (aData.play_count || 0) + 1;
           return aData;
         });
-      });
+      }
 
       // ─────────────────────────────────────────────────────────
       // Ghi log lịch sử (History) cho bài hát VỪA KẾT THÚC

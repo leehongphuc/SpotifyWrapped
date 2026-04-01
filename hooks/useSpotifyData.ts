@@ -132,15 +132,18 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
         }
       });
 
-      return Object.values(counts).map(item => {
-        const spotifyMeta = rawTopArtists.find(a => a.name === item.name);
+      return Object.keys(artistPlays).map(id => {
+        const fbArtist = artistPlays[id];
+        const spotifyMeta = rawTopArtists.find(a => a.id === id);
         return {
           ...spotifyMeta,
-          name: item.name,
-          playcount: item.count,
-          images: spotifyMeta?.images || []
+          id,
+          name: fbArtist.name || spotifyMeta?.name || 'Unknown Artist',
+          playcount: fbArtist.play_count || 0,
+          images: spotifyMeta?.images || (fbArtist.image_url ? [{ url: fbArtist.image_url }] : []),
+          genres: spotifyMeta?.genres || []
         } as any;
-      }).sort((a, b) => b.playcount - a.playcount);
+      }).sort((a, b) => (b.playcount as number) - (a.playcount as number));
     }
 
     const allArtists = Object.keys(artistPlays).map(id => {
@@ -151,7 +154,7 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
         id,
         name: fbArtist.name || spotifyMeta?.name || 'Unknown Artist',
         playcount: fbArtist.play_count || 0,
-        images: spotifyMeta?.images || [],
+        images: spotifyMeta?.images || (fbArtist.image_url ? [{ url: fbArtist.image_url }] : []),
         genres: spotifyMeta?.genres || []
       } as any;
     });

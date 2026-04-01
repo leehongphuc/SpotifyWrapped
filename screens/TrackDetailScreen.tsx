@@ -38,44 +38,7 @@ interface TrackDetailScreenProps {
 
 
 
-// ── Popularity arc ───────────────────────────────────────────────
-function PopularityRing({ score }: { score: number }) {
-    const anim = useRef(new Animated.Value(0)).current;
-    useEffect(() => {
-        Animated.timing(anim, { toValue: score, duration: 900, delay: 200, useNativeDriver: false }).start();
-    }, [score]);
 
-    const color =
-        score >= 80 ? Colors.gold :
-            score >= 50 ? Colors.neonCyan :
-                Colors.textMuted;
-
-    return (
-        <View style={ringStyles.wrapper}>
-            <View style={ringStyles.ring}>
-                <Text style={[ringStyles.score, { color }]}>{score}</Text>
-                <Text style={ringStyles.max}>/100</Text>
-            </View>
-            <Text style={ringStyles.label}>POPULARITY</Text>
-        </View>
-    );
-}
-
-const ringStyles = StyleSheet.create({
-    wrapper: { alignItems: 'center', gap: 6 },
-    ring: {
-        width: 72,
-        height: 72,
-        borderRadius: 36,
-        borderWidth: 2,
-        borderColor: Colors.border,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    score: { fontSize: 20, fontWeight: '800' },
-    max: { color: Colors.textMuted, fontSize: 9, marginTop: -2 },
-    label: { color: Colors.textMuted, fontSize: 9, letterSpacing: 2, fontWeight: '700' },
-});
 
 // ── Main Screen ──────────────────────────────────────────────────
 export default function TrackDetailScreen({ 
@@ -192,11 +155,7 @@ export default function TrackDetailScreen({
 
                     {/* ── Key stats row ── */}
                     <View style={styles.statsGrid}>
-
-                        {/* Popularity */}
-                        {detail && <PopularityRing score={detail.popularity} />}
-
-                        {/* Duration */}
+                        {/* Duration Only */}
                         <View style={styles.statBlock}>
                             <Text style={styles.statValue}>{formatDurationMs(durationMs)}</Text>
                             <Text style={styles.statLabel}>DURATION</Text>
