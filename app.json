@@ -46,7 +46,7 @@
     },
     "plugins": [
       "expo-web-browser",
-      "./plugins/withSpotifyQueries"
+      "./plugins/withSpotifyQueries.js"
     ],
     "extra": {
       "spotifyClientId": "d80501e40c4d45adb2b11a05f0f36102",
