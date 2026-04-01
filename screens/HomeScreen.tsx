@@ -166,7 +166,7 @@ export default function HomeScreen({
           />
           <StatCard
             emoji="◷"
-            value={`${firebaseStats?.total_minutes ?? 0}`}
+            value={`${Number(firebaseStats?.total_minutes || 0).toFixed(2)}`}
             label="Phút nghe"
             gradientColors={['#1E1E1E', '#2A2A2A']}
             delay={100}

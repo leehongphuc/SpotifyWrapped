@@ -106,7 +106,8 @@ const checkAndLogPlaycount = async (userId, accessToken) => {
         await statsRef.transaction((stats) => {
           if (stats) {
             const addedMinutes = lastState.progress_ms / 60000;
-            stats.total_minutes = (stats.total_minutes || 0) + addedMinutes;
+            const newTotal = (stats.total_minutes || 0) + addedMinutes;
+            stats.total_minutes = Math.round(newTotal * 100) / 100;
             stats.last_updated = Date.now();
           }
           return stats;
