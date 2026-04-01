@@ -101,20 +101,52 @@ const checkAndLogPlaycount = async (userId, accessToken) => {
           return trackData;
         });
 
-        // Cập nhật tổng phút nghe (Accurate)
+        // Cập nhật tổng thống kê (minutes & plays)
         const statsRef = db.ref(`users/${userId}/stats`);
         await statsRef.transaction((stats) => {
           if (stats) {
             const addedMinutes = lastState.progress_ms / 60000;
             const newTotal = (stats.total_minutes || 0) + addedMinutes;
             stats.total_minutes = Math.round(newTotal * 100) / 100;
+            
+            // CHỈ CỘNG 1 LƯỢT NẾU NGHE TRÊN 30 GIÂY
+            if (lastState.progress_ms >= 30000) {
+              stats.total_plays = (stats.total_plays || 0) + 1;
+            }
+            
             stats.last_updated = Date.now();
           }
           return stats;
         });
+
+        // ─────────────────────────────────────────────────────────
+        // Tăng Play Count cho bài hát VỪA KẾT THÚC (Nếu đủ 30s)
+        // ─────────────────────────────────────────────────────────
+        if (lastState.progress_ms >= 30000) {
+          const lastTrackRef = db.ref(`users/${userId}/tracks/${lastState.track_id}`);
+          await lastTrackRef.transaction((trackData) => {
+            if (trackData) {
+              trackData.play_count = (trackData.play_count || 0) + 1;
+            }
+            return trackData;
+          });
+
+          // Tăng Play Count cho nghệ sĩ
+          // (Lưu ý: Nghệ sĩ hiện lưu theo chuỗi tên trong history, hoặc ta duyệt qua artists hiện tại)
+          // Tốt nhất là duyệt qua artists của lastState (cần lưu lại list artist_ids trong current_playing)
+          if (lastState.artist_ids) {
+            for (const artistId of lastState.artist_ids) {
+               const artistRef = db.ref(`users/${userId}/artists/${artistId}`);
+               await artistRef.transaction((aData) => {
+                 if (aData) aData.play_count = (aData.play_count || 0) + 1;
+                 return aData;
+               });
+            }
+          }
+        }
       }
 
-      // Tăng Play Count cho bài hát HIỆN TẠI
+      // Khởi tạo thông tin cho bài hát HIỆN TẠI (Không tăng play_count ngay)
       const trackRef = db.ref(`users/${userId}/tracks/${currentTrack.id}`);
       await trackRef.transaction((trackData) => {
         if (!trackData) {
@@ -123,45 +155,40 @@ const checkAndLogPlaycount = async (userId, accessToken) => {
             artist: currentTrack.artists.map(a => a.name).join(', '),
             album_image: currentTrack.album?.images[0]?.url || '',
             duration_ms: currentTrack.duration_ms,
-            play_count: 1,
+            play_count: 0, // Đợi kết thúc mới tính nếu đủ 30s
             last_played: Date.now(),
-            total_listened_ms: 0 // Khởi tạo
+            total_listened_ms: 0
           };
         }
-        trackData.play_count = (trackData.play_count || 0) + 1;
         trackData.last_played = Date.now();
         return trackData;
       });
 
-      // Lượt nghe cho stats (chỉ tăng count)
-      const statsRef = db.ref(`users/${userId}/stats`);
-      await statsRef.transaction((stats) => {
-        if (!stats) return { total_plays: 1, total_minutes: 0, last_updated: Date.now() };
-        stats.total_plays = (stats.total_plays || 0) + 1;
+      // Stats (Chỉ đảm bảo nút stats tồn tại)
+      const globalStatsRef = db.ref(`users/${userId}/stats`);
+      await globalStatsRef.transaction((stats) => {
+        if (!stats) return { total_plays: 0, total_minutes: 0, last_updated: Date.now() };
         return stats;
       });
 
-      // Ghi nhận lượt nghe cho Nghệ sĩ (Bổ sung logic Lấy Ảnh nếu chưa có)
+      // Đảm bảo thông tin Nghệ sĩ (Lấy ảnh nếu cần)
       for (const artist of currentTrack.artists) {
         const artistRef = db.ref(`users/${userId}/artists/${artist.id}`);
         await artistRef.transaction(async (aData) => {
           if (!aData) {
-            // Lần đầu gặp nghệ sĩ này -> Cố gắng lấy ảnh từ Spotify
             try {
               const artistRes = await axios.get(`https://api.spotify.com/v1/artists/${artist.id}`, {
                 headers: { Authorization: `Bearer ${accessToken}` }
               });
               return { 
                 name: artist.name, 
-                play_count: 1,
+                play_count: 0,
                 image_url: artistRes.data.images?.[0]?.url || '' 
               };
             } catch (e) {
-              return { name: artist.name, play_count: 1, image_url: '' };
+              return { name: artist.name, play_count: 0, image_url: '' };
             }
           }
-          
-          // Nghệ sĩ đã tồn tại, nếu chưa có ảnh thì cố gắng cập nhật
           if (!aData.image_url) {
              try {
               const artistRes = await axios.get(`https://api.spotify.com/v1/artists/${artist.id}`, {
@@ -170,8 +197,6 @@ const checkAndLogPlaycount = async (userId, accessToken) => {
               aData.image_url = artistRes.data.images?.[0]?.url || '';
             } catch (e) {}
           }
-
-          aData.play_count = (aData.play_count || 0) + 1;
           return aData;
         });
       }
@@ -198,8 +223,9 @@ const checkAndLogPlaycount = async (userId, accessToken) => {
       track_id: currentTrack.id,
       track_name: currentTrack.name,
       artist_name: currentTrack.artists.map(a => a.name).join(', '),
+      artist_ids: currentTrack.artists.map(a => a.id), // Lưu lại để sau này cộng play_count cho chính xác
       album_image: currentTrack.album?.images[0]?.url || '',
-      progress_ms: newProgressMs, // QUAN TRỌNG: Lưu tiến trình hiện tại để mốc sau tính toán
+      progress_ms: newProgressMs,
       started_at: isNewSong ? Date.now() : (lastState.started_at || Date.now()),
       is_playing: true
     });
