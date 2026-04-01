@@ -1,5 +1,6 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Linking } from 'react-native';
 
 import { CLIENT_ID, TOKEN_KEY, REFRESH_KEY, EXPIRY_KEY } from '../constants/spotify';
 
@@ -269,6 +270,27 @@ export function formatNumber(n: number): string {
   if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
   if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
   return n.toString();
+}
+
+/** 
+ * Điều hướng tới Spotify bằng URI Scheme (Direct App Deep Link)
+ * @param type 'track' | 'artist' | 'album'
+ * @param id Spotify ID
+ * @param fallbackUrl Link https://open.spotify.com/...
+ */
+export async function openInSpotify(type: 'track' | 'artist' | 'album', id: string, fallbackUrl: string) {
+  const uri = `spotify:${type}:${id}`;
+  try {
+    const canOpen = await Linking.canOpenURL(uri);
+    if (canOpen) {
+      await Linking.openURL(uri);
+    } else {
+      await Linking.openURL(fallbackUrl);
+    }
+  } catch (err) {
+    console.warn('Failed to open Spotify URI, falling back to web URL', err);
+    await Linking.openURL(fallbackUrl);
+  }
 }
 
 export default spotifyAxios;

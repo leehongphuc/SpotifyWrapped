@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../constants/colors';
-import { SpotifyTrack, formatNumber, formatRealMinutesListened } from '../services/spotifyApi';
+import { SpotifyTrack, formatNumber, formatRealMinutesListened, openInSpotify } from '../services/spotifyApi';
 import {
     getAudioFeatures,
     getTrackDetail,
@@ -149,7 +149,7 @@ export default function TrackDetailScreen({
                     <Text style={styles.topBarTitle} numberOfLines={1}>{track.name}</Text>
                     <TouchableOpacity
                         style={styles.spotifyIconBtn}
-                        onPress={() => Linking.openURL(track.external_urls?.spotify || 'https://spotify.com')}
+                        onPress={() => openInSpotify('track', track.id, track.external_urls?.spotify || 'https://spotify.com')}
                         activeOpacity={0.7}
                     >
                         <Text style={styles.spotifyIconText}>↗</Text>
@@ -250,7 +250,7 @@ export default function TrackDetailScreen({
                     {/* ── Open Spotify CTA ── */}
                     <View style={styles.section}>
                         <TouchableOpacity
-                            onPress={() => Linking.openURL(track.external_urls?.spotify || 'https://spotify.com')}
+                            onPress={() => openInSpotify('track', track.id, track.external_urls?.spotify || 'https://spotify.com')}
                             activeOpacity={0.8}
                             style={styles.spotifyBtn}
                         >

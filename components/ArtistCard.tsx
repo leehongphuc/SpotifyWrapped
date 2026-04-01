@@ -4,7 +4,7 @@ import {
   StyleSheet, Animated, Modal, Linking,
 } from 'react-native';
 import { Colors } from '../constants/colors';
-import { SpotifyArtist, formatNumber } from '../services/spotifyApi';
+import { SpotifyArtist, formatNumber, openInSpotify } from '../services/spotifyApi';
 import { LinearGradient } from 'expo-linear-gradient';
 
 interface ArtistCardProps {
@@ -96,7 +96,7 @@ export function ArtistCard({ artist, rank, onPress }: ArtistCardProps) {
 
             <TouchableOpacity
               style={styles.spotifyBtn}
-              onPress={() => Linking.openURL(artist.external_urls?.spotify || 'https://spotify.com')}
+              onPress={() => openInSpotify('artist', artist.id, artist.external_urls?.spotify || 'https://spotify.com')}
             >
               <LinearGradient colors={['#1DB954', '#17A349']} style={styles.spotifyBtnBg}>
                 <Text style={styles.spotifyBtnText}>Mở trong Spotify</Text>
