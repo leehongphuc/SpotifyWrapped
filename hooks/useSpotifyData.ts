@@ -71,11 +71,20 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
   // ── Top Tracks: 100% từ Firebase ─────────────────────────────
   const topTracks = useMemo(() => {
     const now = Date.now();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startOfToday = today.getTime();
+
+    const weekStart = new Date(today);
+    const day = weekStart.getDay();
+    const diff = weekStart.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is sunday
+    weekStart.setDate(diff);
+    const startOfWeek = weekStart.getTime();
 
     const msLimit: Record<TimeRange, number> = {
-      '1_day': 1 * 24 * 60 * 60 * 1000,
-      '1_week': 7 * 24 * 60 * 60 * 1000,
-      'short_term': 28 * 24 * 60 * 60 * 1000,  // ~4 tuần
+      '1_day': 0, // Dùng mốc thời gian (startOfToday) thay vì trừ lùi
+      '1_week': 0, // Dùng mốc thời gian (startOfWeek) thay vì trừ lùi
+      'short_term': 28 * 24 * 60 * 60 * 1000,  // ~4 tuần (cuốn chiếu)
       'medium_term': 180 * 24 * 60 * 60 * 1000, // ~6 tháng
       'long_term': Infinity,                   // Tất cả
     };
@@ -87,7 +96,16 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
     const listenedMs: Record<string, number> = {};
 
     history.forEach(item => {
-      if (limit === Infinity || now - item.played_at < limit) {
+      let isValid = false;
+      if (timeRange === '1_day') {
+        isValid = item.played_at >= startOfToday;
+      } else if (timeRange === '1_week') {
+        isValid = item.played_at >= startOfWeek;
+      } else if (limit === Infinity || now - item.played_at < limit) {
+        isValid = true;
+      }
+
+      if (isValid) {
         counts[item.track_id] = (counts[item.track_id] || 0) + 1;
         listenedMs[item.track_id] =
           (listenedMs[item.track_id] || 0) + (item.listened_ms || 0);
@@ -134,10 +152,19 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
   // ── Top Artists: 100% từ Firebase ────────────────────────────
   const topArtists = useMemo(() => {
     const now = Date.now();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startOfToday = today.getTime();
+
+    const weekStart = new Date(today);
+    const dayOfWeek = weekStart.getDay();
+    const diff = weekStart.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+    weekStart.setDate(diff);
+    const startOfWeek = weekStart.getTime();
 
     const msLimit: Record<TimeRange, number> = {
-      '1_day': 1 * 24 * 60 * 60 * 1000,
-      '1_week': 7 * 24 * 60 * 60 * 1000,
+      '1_day': 0,
+      '1_week': 0,
       'short_term': 28 * 24 * 60 * 60 * 1000,
       'medium_term': 180 * 24 * 60 * 60 * 1000,
       'long_term': Infinity,
@@ -157,7 +184,16 @@ export function useSpotifyData(isAuthenticated: boolean): SpotifyData {
     const counts: Record<string, { count: number; name: string; trackIds: Set<string> }> = {};
 
     history.forEach(item => {
-      if (limit === Infinity || now - item.played_at < limit) {
+      let isValid = false;
+      if (timeRange === '1_day') {
+        isValid = item.played_at >= startOfToday;
+      } else if (timeRange === '1_week') {
+        isValid = item.played_at >= startOfWeek;
+      } else if (limit === Infinity || now - item.played_at < limit) {
+        isValid = true;
+      }
+
+      if (isValid) {
         const fbTrack = trackPlays[item.track_id];
         const artistStr = fbTrack?.artist || item.artist_name || '';
         if (!artistStr) return;

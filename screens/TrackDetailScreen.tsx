@@ -41,8 +41,8 @@ interface TrackDetailScreenProps {
 
 
 // ── Main Screen ──────────────────────────────────────────────────
-export default function TrackDetailScreen({ 
-    track, rank, onClose, playcount = 0, totalListenedMs = 0 
+export default function TrackDetailScreen({
+    track, rank, onClose, playcount = 0, totalListenedMs = 0
 }: TrackDetailScreenProps) {
     const [detail, setDetail] = useState<TrackDetail | null>(null);
     const [loadingDetail, setLoadingDetail] = useState(true);
@@ -81,9 +81,10 @@ export default function TrackDetailScreen({
 
     const albumImage = track?.album?.images?.[0]?.url || '';
     const artistNames = track?.artists?.map(a => a.name).join(', ') || '—';
-    const releaseYear = detail?.album?.release_date?.slice(0, 4) || '';
-    const durationMs = detail?.duration_ms || track.duration_ms || 0;
-    
+    const releaseYear = detail?.album?.release_date?.slice(0, 4) || track?.album?.release_date?.slice(0, 4) || '';
+    // Dùng track.duration_ms ngay từ đầu, không chờ API — tránh giật layout
+    const durationMs = track.duration_ms || detail?.duration_ms || 0;
+
     // Sử dụng thời gian nghe thực tế từ Firebase
     const minutesListened = formatRealMinutesListened(totalListenedMs || track.total_listened_ms || 0);
 
@@ -146,11 +147,10 @@ export default function TrackDetailScreen({
                     <View style={styles.titleBlock}>
                         <Text style={styles.trackName}>{track.name}</Text>
                         <Text style={styles.artistName}>{artistNames}</Text>
-                        {detail?.album && (
-                            <Text style={styles.albumName}>
-                                {detail.album.name}{releaseYear ? ` · ${releaseYear}` : ''}
-                            </Text>
-                        )}
+                        {/* Dùng track.album.name ngay — không chờ detail để tránh layout shift */}
+                        <Text style={styles.albumName}>
+                            {(detail?.album?.name || track?.album?.name || '')}{releaseYear ? ` · ${releaseYear}` : ''}
+                        </Text>
                     </View>
 
                     {/* ── Key stats row ── */}
@@ -185,18 +185,23 @@ export default function TrackDetailScreen({
 
 
 
-                    {/* ── Album info ── */}
-                    {detail?.album && (
+                    {/* ── Album info ── dùng track.album ngay, bổ sung total_tracks từ detail khi có */}
+                    {(track?.album || detail?.album) && (
                         <View style={styles.section}>
                             <Text style={styles.sectionLabel}>ALBUM</Text>
                             <View style={styles.albumRow}>
-                                <Image source={{ uri: detail.album.images?.[0]?.url || '' }} style={styles.albumThumb} />
+                                <Image
+                                    source={{ uri: track?.album?.images?.[0]?.url || detail?.album?.images?.[0]?.url || '' }}
+                                    style={styles.albumThumb}
+                                />
                                 <View style={styles.albumInfo}>
-                                    <Text style={styles.albumInfoName} numberOfLines={2}>{detail.album.name}</Text>
-                                    <Text style={styles.albumInfoMeta}>
-                                        {releaseYear}{detail.album.total_tracks ? ` · ${detail.album.total_tracks} tracks` : ''}
+                                    <Text style={styles.albumInfoName} numberOfLines={2}>
+                                        {detail?.album?.name || track?.album?.name || ''}
                                     </Text>
-                                    {detail.explicit && (
+                                    <Text style={styles.albumInfoMeta}>
+                                        {releaseYear}{detail?.album?.total_tracks ? ` · ${detail.album.total_tracks} tracks` : ''}
+                                    </Text>
+                                    {detail?.explicit && (
                                         <View style={styles.explicitBadge}>
                                             <Text style={styles.explicitText}>E</Text>
                                         </View>

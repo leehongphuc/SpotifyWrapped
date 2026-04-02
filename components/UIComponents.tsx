@@ -73,8 +73,8 @@ const statStyles = StyleSheet.create({
 // ── TimeFilter ───────────────────────────────────────────────────
 
 const TIME_OPTIONS = [
-  { key: '1_day' as const, label: '1 Day' },
-  { key: '1_week' as const, label: '1 Week' },
+  { key: '1_day' as const, label: 'Hôm nay' },
+  { key: '1_week' as const, label: 'Tuần này' },
   { key: 'short_term' as const, label: '4 Weeks' },
   { key: 'medium_term' as const, label: '6 Months' },
   { key: 'long_term' as const, label: 'All Time' },

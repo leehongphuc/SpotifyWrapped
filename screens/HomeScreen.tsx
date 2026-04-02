@@ -129,12 +129,14 @@ export default function HomeScreen({
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={() => {
-              const spotifyUri = `spotify:track:${currentPlaying.track_id}`;
-              Linking.canOpenURL(spotifyUri)
+              // Sử dụng scheme 'spotify://' để mở thẳng app ở trạng thái hiện tại (không ép play lại từ đầu)
+              const appUri = 'spotify://';
+              Linking.canOpenURL(appUri)
                 .then((supported) => {
                   if (supported) {
-                    Linking.openURL(spotifyUri);
+                    Linking.openURL(appUri);
                   } else {
+                    // Nếu chưa cài app Spotify, fallback sang mở link bài hát trên web
                     Linking.openURL(`https://open.spotify.com/track/${currentPlaying.track_id}`);
                   }
                 })
@@ -174,28 +176,6 @@ export default function HomeScreen({
         )}
       </View>
 
-      {/* Stats */}
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>THỐNG KÊ</Text>
-        <View style={styles.statsCard}>
-          <View style={styles.statsItem}>
-            <View style={styles.statsIconWrap}>
-              <Text style={styles.statsIcon}>▶</Text>
-            </View>
-            <Text style={styles.statsValue}>{firebaseStats?.total_plays ?? 0}</Text>
-            <Text style={styles.statsLabel}>lượt nghe</Text>
-          </View>
-          <View style={styles.statsDivider} />
-          <View style={styles.statsItem}>
-            <View style={styles.statsIconWrap}>
-              <Text style={styles.statsIcon}>◷</Text>
-            </View>
-            <Text style={styles.statsValue}>{Number(firebaseStats?.total_minutes || 0).toFixed(1)}</Text>
-            <Text style={styles.statsLabel}>phút nghe</Text>
-          </View>
-        </View>
-      </View>
-
       {/* Top Tracks */}
       <View style={styles.section}>
         <Text style={styles.sectionLabel}>TOP TRACKS · TUẦN NÀY</Text>
@@ -216,8 +196,8 @@ export default function HomeScreen({
       <View style={styles.section}>
         <Text style={styles.sectionLabel}>TOP ARTISTS · TUẦN NÀY</Text>
         {loading && topArtists.length === 0
-          ? Array.from({ length: 3 }).map((_, i) => <TrackSkeleton key={i} />)
-          : topArtists.slice(0, 3).map((artist, i) => (
+          ? Array.from({ length: 5 }).map((_, i) => <TrackSkeleton key={i} />)
+          : topArtists.slice(0, 5).map((artist, i) => (
             <ArtistCard key={artist.id} artist={artist} rank={i + 1} />
           ))}
       </View>
