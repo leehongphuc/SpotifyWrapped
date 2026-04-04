@@ -9,7 +9,7 @@
     "userInterfaceStyle": "dark",
     "scheme": "spotifywrapped",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#080808"
     },
