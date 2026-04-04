@@ -89,6 +89,7 @@ function AppContent() {
             firebaseStats={firebaseStats} currentPlaying={currentPlaying}
             loading={dataLoading} refreshing={refreshing}
             onRefresh={refresh} onTrackPress={openTrackDetail}
+            timeRange={timeRange}
           />
         );
       case 'tracks':

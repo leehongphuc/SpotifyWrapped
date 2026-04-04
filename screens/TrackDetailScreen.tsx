@@ -12,13 +12,12 @@ import {
     StatusBar,
     ActivityIndicator,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../constants/colors';
 import { SpotifyTrack, formatNumber, formatRealMinutesListened, openInSpotify } from '../services/spotifyApi';
 import {
-    getAudioFeatures,
     getTrackDetail,
-    AudioFeatures,
     TrackDetail,
     formatKey,
     formatBPM,
@@ -44,6 +43,7 @@ interface TrackDetailScreenProps {
 export default function TrackDetailScreen({
     track, rank, onClose, playcount = 0, totalListenedMs = 0
 }: TrackDetailScreenProps) {
+    const insets = useSafeAreaInsets();
     const [detail, setDetail] = useState<TrackDetail | null>(null);
     const [loadingDetail, setLoadingDetail] = useState(true);
 
@@ -106,7 +106,7 @@ export default function TrackDetailScreen({
                 <StatusBar barStyle="light-content" />
 
                 {/* ── Top bar ── */}
-                <View style={styles.topBar}>
+                <View style={[styles.topBar, { paddingTop: insets.top + 12 }]}>
                     <TouchableOpacity onPress={handleClose} style={styles.backBtn} activeOpacity={0.7}>
                         <Text style={styles.backIcon}>‹</Text>
                     </TouchableOpacity>
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
     topBar: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingTop: 56,
+        paddingTop: 0, // set dynamically via insets
         paddingBottom: 12,
         paddingHorizontal: 16,
         gap: 12,

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -26,6 +26,19 @@ export default function ArtistsScreen({
   artists, timeRange, setTimeRange,
   loading, refreshing, onRefresh,
 }: ArtistsScreenProps) {
+  // Khi timeRange thay đổi → hiển thị skeleton ngắn để reset animation
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const prevTimeRange = useRef(timeRange);
+
+  useEffect(() => {
+    if (prevTimeRange.current !== timeRange) {
+      prevTimeRange.current = timeRange;
+      setIsTransitioning(true);
+      const t = setTimeout(() => setIsTransitioning(false), 50);
+      return () => clearTimeout(t);
+    }
+  }, [timeRange]);
+
   const timeLabel = {
     '1_day': 'Hôm nay',
     '1_week': 'Tuần này',
@@ -52,19 +65,24 @@ export default function ArtistsScreen({
     </View>
   );
 
+  const showSkeleton = loading && artists.length === 0;
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
 
-      {loading && artists.length === 0 ? (
+      {showSkeleton || isTransitioning ? (
         <>
           <ListHeader />
           {Array.from({ length: 8 }).map((_, i) => <TrackSkeleton key={i} />)}
         </>
       ) : (
         <FlatList
+          // key prop = timeRange → force full remount khi đổi filter
+          // giúp tất cả ArtistCard mount mới và chạy animation từ đầu, không bị "nhảy vị trí"
+          key={timeRange}
           data={artists}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item, index) => item.id || `artist-${index}`}
           renderItem={({ item, index }) => (
             <ArtistCard artist={item} rank={index + 1} />
           )}

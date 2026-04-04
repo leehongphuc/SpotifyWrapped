@@ -27,12 +27,13 @@ export function TrackCard({ track, rank, onPress, compact = false }: TrackCardPr
 
   const albumImage = track?.album?.images?.[0]?.url || '';
   const artistNames = track?.artists?.map(a => a.name).join(', ') || '—';
-  const rankLabel = rank < 10 ? `0${rank}` : `${rank}`;
+  const rankLabel = rank.toString();
   const rankColor =
     rank === 1 ? Colors.gold :
       rank === 2 ? Colors.silver :
         rank === 3 ? Colors.bronze :
           Colors.textMuted;
+  const rankDiff = track.rankDiff;
 
   return (
     <Animated.View style={{ opacity }}>
@@ -43,7 +44,12 @@ export function TrackCard({ track, rank, onPress, compact = false }: TrackCardPr
       >
         {rank <= 3 && <View style={[styles.topIndicator, { backgroundColor: rankColor }]} />}
 
-        <Text style={[styles.rank, { color: rankColor }]}>{rankLabel}</Text>
+        <View style={styles.rankContainer}>
+          {rankDiff !== undefined && rankDiff > 0 && <Text style={[styles.trendIcon, styles.trendUp]}>▲</Text>}
+          {rankDiff !== undefined && rankDiff === 0 && <Text style={[styles.trendIcon, styles.trendFlat]}>●</Text>}
+          <Text style={[styles.rank, { color: rankColor }]}>{rankLabel}</Text>
+          {rankDiff !== undefined && rankDiff < 0 && <Text style={[styles.trendIcon, styles.trendDown]}>▼</Text>}
+        </View>
 
         {albumImage ? (
           <Image source={{ uri: albumImage }} style={compact ? styles.imgCompact : styles.img} />
@@ -86,12 +92,34 @@ const styles = StyleSheet.create({
     width: 2,
     borderRadius: 1,
   },
+  rankContainer: {
+    width: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+  },
   rank: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1,
-    width: 22,
-    textAlign: 'right',
+    fontSize: 12,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  trendIcon: {
+    fontSize: 7,
+    position: 'absolute',
+    left: 10,
+  },
+  trendUp: {
+    color: '#1DB954', // Spotify Green
+    top: -10,
+  },
+  trendDown: {
+    color: '#E91429', // Red
+    bottom: -10,
+  },
+  trendFlat: {
+    color: '#3B82F6', // Blue dot
+    fontSize: 5,
+    top: -8,
   },
   img: { width: 52, height: 52, borderRadius: 2 },
   imgCompact: { width: 42, height: 42, borderRadius: 2 },

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, FlatList, RefreshControl, StatusBar,
 } from 'react-native';
@@ -22,6 +22,20 @@ export default function TracksScreen({
   tracks, timeRange, setTimeRange,
   loading, refreshing, onRefresh, onTrackPress,
 }: TracksScreenProps) {
+  // Khi timeRange thay đổi → hiển thị skeleton ngắn để reset animation
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const prevTimeRange = useRef(timeRange);
+
+  useEffect(() => {
+    if (prevTimeRange.current !== timeRange) {
+      prevTimeRange.current = timeRange;
+      setIsTransitioning(true);
+      // Chờ 1 frame để unmount list cũ, sau đó mount list mới với animation sạch
+      const t = setTimeout(() => setIsTransitioning(false), 50);
+      return () => clearTimeout(t);
+    }
+  }, [timeRange]);
+
   const timeLabel = {
     '1_day': 'Hôm nay',
     '1_week': 'Tuần này',
@@ -48,18 +62,23 @@ export default function TracksScreen({
     </View>
   );
 
+  const showSkeleton = loading && tracks.length === 0;
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-      {loading && tracks.length === 0 ? (
+      {showSkeleton || isTransitioning ? (
         <>
           <ListHeader />
           {Array.from({ length: 8 }).map((_, i) => <TrackSkeleton key={i} />)}
         </>
       ) : (
         <FlatList
+          // key prop = timeRange → force full remount khi đổi filter
+          // giúp tất cả TrackCard mount mới và chạy animation từ đầu, không bị "nhảy vị trí"
+          key={timeRange}
           data={tracks}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item, index) => item.id || `track-${index}`}
           renderItem={({ item, index }) => (
             <TrackCard
               track={item}

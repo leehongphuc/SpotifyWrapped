@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { AppState, AppStateStatus } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
-import * as Crypto from 'expo-crypto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ref, set } from 'firebase/database';
 import { db } from '../services/firebaseConfig';
@@ -17,16 +17,21 @@ export function useSpotifyAuth() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Khi app quay lại foreground → kiểm tra token còn không (thay vì polling interval)
+  const tokenRef = useRef(token);
+  useEffect(() => { tokenRef.current = token; }, [token]);
+
   useEffect(() => {
-    // Lắng nghe sự kiện token bị xoá từ interceptor (như khi refresh fail)
-    const interval = setInterval(async () => {
-      const storedToken = await AsyncStorage.getItem(TOKEN_KEY);
-      if (!storedToken && token) {
-        setToken(null);
+    const subscription = AppState.addEventListener('change', async (state: AppStateStatus) => {
+      if (state === 'active') {
+        const storedToken = await AsyncStorage.getItem(TOKEN_KEY);
+        if (!storedToken && tokenRef.current) {
+          setToken(null);
+        }
       }
-    }, 10000); // Check mỗi 10s
-    return () => clearInterval(interval);
-  }, [token]);
+    });
+    return () => subscription.remove();
+  }, []);
 
   // Redirect URI (tự động theo scheme trong app.json)
   const redirectUri = AuthSession.makeRedirectUri({
@@ -77,58 +82,17 @@ export function useSpotifyAuth() {
         const expiryTime = parseInt(expiry, 10);
         if (Date.now() < expiryTime - 60000) {
 
-          // Thử gọi /me với retry nếu bị 429
-          let profileData = null;
-          for (let attempt = 0; attempt < 3; attempt++) {
-            try {
-              const profileRes = await fetch('https://api.spotify.com/v1/me', {
-                headers: { Authorization: `Bearer ${storedToken}` }
-              });
-
-              if (profileRes.status === 429) {
-                const retryAfter = profileRes.headers.get('retry-after') || '10';
-                console.log(`Rate limited, waiting ${retryAfter}s...`);
-                await new Promise(r => setTimeout(r, parseInt(retryAfter) * 1000));
-                continue; // thử lại
-              }
-
-              if (!profileRes.ok) {
-                // Token invalid (401, 403) → xoá, bắt login lại
-                await AsyncStorage.multiRemove([TOKEN_KEY, REFRESH_KEY, EXPIRY_KEY]);
-                setLoading(false);
-                return;
-              }
-
-              profileData = await profileRes.json();
-              break; // thành công → thoát loop
-
-            } catch (e) {
-              console.error(`Profile fetch attempt ${attempt + 1} failed:`, e);
-              if (attempt === 2) throw e; // hết retry → throw
-              await new Promise(r => setTimeout(r, 2000));
-            }
-          }
-
-          // Cập nhật Firebase nếu lấy được profile
-          if (profileData?.id) {
-            const refreshToken = await AsyncStorage.getItem(REFRESH_KEY);
-            if (refreshToken) {
-              const userRef = ref(db, `users/${profileData.id}/tokens`);
-              await set(userRef, {
-                refresh_token: refreshToken,
-                access_token: storedToken,
-                expires_at: expiryTime
-              });
-            }
-          }
-
+          // Token còn hạn → dùng luôn, thử verify sau
           setToken(storedToken);
           setLoading(false);
+
+          // Verify + cập nhật Firebase trong nền (không block UI, không logout nếu lỗi mạng)
+          verifyTokenInBackground(storedToken, expiryTime);
           return;
 
         } else {
           // Token hết hạn — thử refresh
-          await tryRefreshToken();
+          await tryRefreshToken(storedToken);
           return;
         }
       }
@@ -136,6 +100,44 @@ export function useSpotifyAuth() {
       console.error('Error checking stored token:', e);
     }
     setLoading(false);
+  }
+
+  /** Xác minh token và cập nhật Firebase trong nền (không gây logout khi lỗi mạng) */
+  async function verifyTokenInBackground(storedToken: string, expiryTime: number) {
+    try {
+      const profileRes = await fetch('https://api.spotify.com/v1/me', {
+        headers: { Authorization: `Bearer ${storedToken}` }
+      });
+
+      if (profileRes.status === 401 || profileRes.status === 403) {
+        // Token thực sự không hợp lệ (không phải lỗi mạng) → mới logout
+        await AsyncStorage.multiRemove([TOKEN_KEY, REFRESH_KEY, EXPIRY_KEY]);
+        setToken(null);
+        return;
+      }
+
+      if (!profileRes.ok) {
+        // Lỗi mạng / rate limit / server → giữ token cũ, không logout
+        console.warn('verifyTokenInBackground: non-auth error, keeping token', profileRes.status);
+        return;
+      }
+
+      const profileData = await profileRes.json();
+      if (profileData?.id) {
+        const refreshToken = await AsyncStorage.getItem(REFRESH_KEY);
+        if (refreshToken) {
+          const userRef = ref(db, `users/${profileData.id}/tokens`);
+          await set(userRef, {
+            refresh_token: refreshToken,
+            access_token: storedToken,
+            expires_at: expiryTime
+          });
+        }
+      }
+    } catch (e) {
+      // Lỗi mạng hoàn toàn → giữ nguyên, không logout
+      console.warn('verifyTokenInBackground: network error, keeping token', e);
+    }
   }
 
   /** Đổi code → access token */
@@ -199,7 +201,7 @@ export function useSpotifyAuth() {
   }
 
   /** Refresh token khi hết hạn */
-  async function tryRefreshToken() {
+  async function tryRefreshToken(fallbackToken?: string) {
     try {
       const refreshToken = await AsyncStorage.getItem(REFRESH_KEY);
       if (!refreshToken) {
@@ -213,11 +215,22 @@ export function useSpotifyAuth() {
         client_id: CLIENT_ID,
       });
 
-      const res = await fetch('https://accounts.spotify.com/api/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: body.toString(),
-      });
+      let res: Response;
+      try {
+        res = await fetch('https://accounts.spotify.com/api/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: body.toString(),
+        });
+      } catch (networkErr) {
+        // Lỗi mạng — nếu có token cũ chưa hết hạn hản, dùng tạm
+        console.warn('tryRefreshToken: network error, using fallback token if available');
+        if (fallbackToken) {
+          setToken(fallbackToken);
+        }
+        setLoading(false);
+        return;
+      }
 
       const data = await res.json();
 
@@ -245,6 +258,10 @@ export function useSpotifyAuth() {
             });
           }
         } catch (e) {}
+      } else {
+        // Refresh token hết hiệu lực (Spotify từ chối) → phải login lại
+        console.error('tryRefreshToken: refresh rejected by Spotify', data);
+        await AsyncStorage.multiRemove([TOKEN_KEY, REFRESH_KEY, EXPIRY_KEY]);
       }
     } catch (e) {
       console.error('Refresh token error:', e);

@@ -1,8 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import {
   getMe,
-  getTopTracks,
-  getTopArtists,
   getMyPlaylists,
   getRecentlyPlayed,
   TimeRange,
@@ -17,24 +15,12 @@ export const spotifyKeys = {
   recentlyPlayed: () => [...spotifyKeys.all, 'recent'] as const,
 };
 
-export function useSpotifyQueries(isAuthenticated: boolean, timeRange: TimeRange) {
+export function useSpotifyQueries(isAuthenticated: boolean, _timeRange: TimeRange) {
   const profileQuery = useQuery({
     queryKey: spotifyKeys.profile(),
     queryFn: getMe,
     enabled: isAuthenticated,
     staleTime: Infinity, // Profile ít thay đổi
-  });
-
-  const tracksQuery = useQuery({
-    queryKey: spotifyKeys.topTracks(timeRange),
-    queryFn: () => getTopTracks(timeRange as any, 50),
-    enabled: isAuthenticated && ['short_term', 'medium_term', 'long_term'].includes(timeRange),
-  });
-
-  const artistsQuery = useQuery({
-    queryKey: spotifyKeys.topArtists(timeRange),
-    queryFn: () => getTopArtists(timeRange as any, 50),
-    enabled: isAuthenticated && ['short_term', 'medium_term', 'long_term'].includes(timeRange),
   });
 
   const playlistsQuery = useQuery({
@@ -51,8 +37,6 @@ export function useSpotifyQueries(isAuthenticated: boolean, timeRange: TimeRange
 
   return {
     profileQuery,
-    tracksQuery,
-    artistsQuery,
     playlistsQuery,
     recentQuery,
   };

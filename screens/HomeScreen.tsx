@@ -20,6 +20,7 @@ interface HomeScreenProps {
   refreshing: boolean;
   onRefresh: () => void;
   onTrackPress?: (track: SpotifyTrack, rank: number) => void;
+  timeRange?: string;
 }
 
 function AnimatedWave() {
@@ -78,8 +79,18 @@ export default function HomeScreen({
   user, topTracks, topArtists,
   firebaseStats, currentPlaying,
   loading, refreshing, onRefresh, onTrackPress,
+  timeRange = 'short_term',
 }: HomeScreenProps) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  const timeLabel: Record<string, string> = {
+    '1_day': 'Hôm nay',
+    '1_week': 'Tuần này',
+    short_term: '4 tuần qua',
+    medium_term: '6 tháng qua',
+    long_term: 'Mọi thời đại',
+  };
+  const currentTimeLabel = timeLabel[timeRange] || 'Tuần này';
 
   useEffect(() => {
     Animated.timing(fadeAnim, { toValue: 1, duration: 700, useNativeDriver: true }).start();
@@ -178,7 +189,7 @@ export default function HomeScreen({
 
       {/* Top Tracks */}
       <View style={styles.section}>
-        <Text style={styles.sectionLabel}>TOP TRACKS · TUẦN NÀY</Text>
+        <Text style={styles.sectionLabel}>TOP TRACKS · {currentTimeLabel.toUpperCase()}</Text>
         {loading && topTracks.length === 0
           ? Array.from({ length: 5 }).map((_, i) => <TrackSkeleton key={i} />)
           : topTracks.slice(0, 5).map((track, i) => (
@@ -194,7 +205,7 @@ export default function HomeScreen({
 
       {/* Top Artists */}
       <View style={styles.section}>
-        <Text style={styles.sectionLabel}>TOP ARTISTS · TUẦN NÀY</Text>
+        <Text style={styles.sectionLabel}>TOP ARTISTS · {currentTimeLabel.toUpperCase()}</Text>
         {loading && topArtists.length === 0
           ? Array.from({ length: 5 }).map((_, i) => <TrackSkeleton key={i} />)
           : topArtists.slice(0, 5).map((artist, i) => (

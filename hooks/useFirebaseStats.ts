@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ref, onValue } from 'firebase/database';
 import { db } from '../services/firebaseConfig';
-import { SpotifyTrack } from '../services/spotifyApi';
 
 export interface FirebaseStats {
   total_plays: number;
@@ -39,10 +38,13 @@ export function useFirebaseStats(userId: string | undefined) {
   const [history, setHistory] = useState<HistoryRecord[]>([]);
 
   useEffect(() => {
+    // Reset toàn bộ khi userId thay đổi hoặc logout
     if (!userId) {
       setStats(null);
       setCurrentPlaying(null);
       setTrackPlays({});
+      setArtistPlays({});
+      setHistory([]);
       return;
     }
 
@@ -109,43 +111,11 @@ export function useFirebaseStats(userId: string | undefined) {
     };
   }, [userId]);
 
-  // Hàm helper để gắp Playcount Firebase vào mã Spotify Track
-  const attachPlaycount = (tracks: SpotifyTrack[]): SpotifyTrack[] => {
-    if (Object.keys(trackPlays).length === 0) return tracks;
-    return tracks.map(t => ({
-      ...t,
-      playcount: trackPlays[t.id]?.play_count || 0,
-      total_listened_ms: trackPlays[t.id]?.total_listened_ms || 0
-    }));
-  };
-
-  // Hàm helper gắp Playcount Firebase và đếm số Bài Hát đã lưu của Nghệ sĩ
-  const attachArtistStats = (artists: any[]): any[] => {
-    if (Object.keys(artistPlays).length === 0 && Object.keys(trackPlays).length === 0) return artists;
-    return artists.map(a => {
-      // Đếm số bài hát có tên nghệ sĩ này lọt vào firebase tracks
-      let tracksCount = 0;
-      for (const trackId in trackPlays) {
-        if (trackPlays[trackId].artist?.includes(a.name)) {
-          tracksCount++;
-        }
-      }
-
-      return {
-        ...a,
-        playcount: artistPlays[a.id] || 0,
-        tracks_count: tracksCount
-      };
-    });
-  };
-
   return {
     stats,
     currentPlaying,
     trackPlays,
     artistPlays,
     history,
-    attachPlaycount,
-    attachArtistStats
   };
 }

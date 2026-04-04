@@ -28,12 +28,13 @@ export function ArtistCard({ artist, rank, onPress }: ArtistCardProps) {
 
   const artistImage = artist?.images?.[0]?.url || '';
   const topGenre = artist?.genres?.[0] || '';
-  const rankLabel = rank < 10 ? `0${rank}` : `${rank}`;
+  const rankLabel = rank.toString();
   const rankColor =
     rank === 1 ? Colors.gold :
       rank === 2 ? Colors.silver :
         rank === 3 ? Colors.bronze :
           Colors.textMuted;
+  const rankDiff = artist.rankDiff;
 
   // FIX: Nếu không có ID → fallback search Spotify theo tên nghệ sĩ
   const handleOpenSpotify = () => {
@@ -51,7 +52,12 @@ export function ArtistCard({ artist, rank, onPress }: ArtistCardProps) {
         onPress={() => { onPress?.(); setModalVisible(true); }}
         style={styles.container}
       >
-        <Text style={[styles.rank, { color: rankColor }]}>{rankLabel}</Text>
+        <View style={styles.rankContainer}>
+          {rankDiff !== undefined && rankDiff > 0 && <Text style={[styles.trendIcon, styles.trendUp]}>▲</Text>}
+          {rankDiff !== undefined && rankDiff === 0 && <Text style={[styles.trendIcon, styles.trendFlat]}>●</Text>}
+          <Text style={[styles.rank, { color: rankColor }]}>{rankLabel}</Text>
+          {rankDiff !== undefined && rankDiff < 0 && <Text style={[styles.trendIcon, styles.trendDown]}>▼</Text>}
+        </View>
 
         {artistImage ? (
           <Image source={{ uri: artistImage }} style={styles.img} />
@@ -134,12 +140,34 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.border,
     position: 'relative',
   },
+  rankContainer: {
+    width: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+  },
   rank: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1,
-    width: 22,
-    textAlign: 'right',
+    fontSize: 12,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  trendIcon: {
+    fontSize: 7,
+    position: 'absolute',
+    left: 10,
+  },
+  trendUp: {
+    color: '#1DB954', // Spotify Green
+    top: -10,
+  },
+  trendDown: {
+    color: '#E91429', // Red
+    bottom: -10,
+  },
+  trendFlat: {
+    color: '#3B82F6', // Blue dot
+    fontSize: 5,
+    top: -8,
   },
   img: {
     width: 52,

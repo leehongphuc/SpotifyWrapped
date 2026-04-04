@@ -112,13 +112,13 @@ export default function StatsScreen({
         <View style={styles.artistStats}>
           <View style={styles.artistStatCard}>
             <Text style={styles.artistStatValue}>{artists.length}</Text>
-            <Text style={styles.artistStatLabel}>Vòng Lặp Theo Dõi</Text>
+            <Text style={styles.artistStatLabel}>Nghệ sĩ đã nghe</Text>
           </View>
           <View style={styles.artistStatCard}>
             <Text style={styles.artistStatValue} numberOfLines={1}>
-              {artists[0] ? formatNumber(artists[0]?.followers?.total || 0) : '—'}
+              {artists[0]?.name || '—'}
             </Text>
-            <Text style={styles.artistStatLabel}>Followers Nghệ Sĩ Nhất</Text>
+            <Text style={styles.artistStatLabel}>Nghệ sĩ hàng đầu</Text>
           </View>
         </View>
       </View>

@@ -136,6 +136,7 @@ export interface SpotifyTrack {
   external_urls: { spotify: string };
   playcount?: number; // Last.fm
   total_listened_ms?: number; // Accurate time from Firebase
+  rankDiff?: number;
 }
 
 export interface SpotifyArtist {
@@ -147,6 +148,7 @@ export interface SpotifyArtist {
   followers: { total: number };
   external_urls: { spotify: string };
   playcount?: number; // Last.fm
+  rankDiff?: number;
 }
 
 export interface SpotifyPlaylist {
@@ -241,7 +243,7 @@ export function formatRealMinutesListened(totalListenedMs: number): string {
 
   const hours = Math.floor(minutes / 60);
   const remainMins = minutes % 60;
-  return `${hours}g ${remainMins}${remainMins ? 'p' : ''}`;
+  return remainMins > 0 ? `${hours}g ${remainMins}p` : `${hours}g`;
 }
 
 /** Tính tổng thời gian phát nhạc từ Firebase hoặc ước lượng bằng (Lặp x Thời Lượng) (ms) */
